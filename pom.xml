@@ -24,8 +24,8 @@
     <modules>
         <module>common</module>
         <module>hibernate</module>
-<!--        <module>jdbi</module>-->
-<!--        <module>ujorm3</module>-->
+        <module>jdbi</module>
+        <module>ujorm3</module>
         <module>exposed</module>
         <module>benchmark</module>
     </modules>
