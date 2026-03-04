@@ -11,6 +11,7 @@ import org.benchmark.common.EmployeeRelationView;
 import org.benchmark.common.Stopwatch;
 import org.ujorm.core.AbstractSnapshotable;
 import org.ujorm.mapper.core.EntityManager;
+import org.ujorm.mapper.core.EntityManagerProvider;
 import org.ujorm.mapper.jdbc.ResultSetMapper;
 import org.ujorm.tools.jdbc.SqlParamBuilder;
 
@@ -69,9 +70,10 @@ public class UjormBenchmark {
 
     /** Data Access Object for entities */
     public static class Dao {
-        private final EntityManager<Employee, Long> empEm = EntityManager.of(Employee.class, Long.class);
-        private final EntityManager<City, Long> cityEm = EntityManager.of(City.class, Long.class);
-        private final ResultSetMapper<EmployeeRelationView> empView = ResultSetMapper.of(EmployeeRelationView.class);
+
+        static final EntityManager<Employee, Long> empEm = EntityManagerProvider.em(Employee.class, Long.class);
+        static final EntityManager<City, Long> cityEm = EntityManagerProvider.em(City.class, Long.class);
+        static final ResultSetMapper<EmployeeRelationView> empView = ResultSetMapper.of(EmployeeRelationView.class);
 
         /** Persists a single entity to the database */
         public void insert(Employee entity, Connection conn) {

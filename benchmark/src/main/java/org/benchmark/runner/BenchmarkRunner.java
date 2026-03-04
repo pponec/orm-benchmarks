@@ -23,7 +23,7 @@ public class BenchmarkRunner {
         }
 
         {   // Run The Benchmark:
-            var iterations = 10_000;
+            var iterations = 100_000;
             runner.runHibernate("Hibernate", iterations);
             runner.runJdbi("Jdbi", iterations);
             runner.runExposed("Exposed", iterations);
