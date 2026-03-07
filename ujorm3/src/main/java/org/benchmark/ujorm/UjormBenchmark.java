@@ -10,9 +10,9 @@ import org.benchmark.common.DatabaseUtils;
 import org.benchmark.common.EmployeeRelationView;
 import org.benchmark.common.Stopwatch;
 import org.ujorm.core.AbstractSnapshotable;
-import org.ujorm.mapper.EntityManagerProvider;
-import org.ujorm.mapper.ResultSetMapper;
+import org.ujorm.mapper.UjormServiceProvider;
 import org.ujorm.mapper.core.EntityManager;
+import org.ujorm.mapper.jdbc.ResultSetMapper;
 import org.ujorm.tools.jdbc.SqlParamBuilder;
 
 import java.math.BigDecimal;
@@ -72,9 +72,9 @@ public class UjormBenchmark {
     /** Data Access Object for entities */
     public static class Dao {
 
-        static final EntityManager<Employee, Long> empEm = EntityManagerProvider.em(Employee.class, Long.class);
-        static final EntityManager<City, Long> cityEm = EntityManagerProvider.em(City.class, Long.class);
-        static final ResultSetMapper<EmployeeRelationView> empView = ResultSetMapper.of(EmployeeRelationView.class);
+        static final EntityManager<Employee, Long> empEm = UjormServiceProvider.em(Employee.class, Long.class);
+        static final EntityManager<City, Long> cityEm = UjormServiceProvider.em(City.class, Long.class);
+        static final ResultSetMapper<EmployeeRelationView> empView = UjormServiceProvider.map(EmployeeRelationView.class);
 
         /** Persists a single entity to the database */
         public void insert(Employee entity, Connection conn) {
@@ -83,17 +83,20 @@ public class UjormBenchmark {
 
         /** Persists a batch of entities */
         public void insertBatch(List<Employee> entities, Connection conn) {
-            empEm.crud(conn).insertBatch(entities.toArray(Employee[]::new));
+            empEm.crud(conn).insertBatch(entities.stream(), null);
         }
 
         /** Retrieves all employees */
         public List<Employee> findAllEmployees(Connection conn) {
-            return empEm.crud(conn).read("").fetchSize(empEm.defaultBatchSize()).streamMap(empEm::map).toList();
+            return empEm.crud(conn)
+                    .selectWhere("", builder -> builder
+                    .fetchSize(empEm.defaultBatchSize())
+                    .streamMap(empEm::map).toList());
         }
 
         /** Updates specific columns using batch */
         public void updateSalaryBatch(Stream<Employee> entities, Connection conn) {
-            empEm.crud(conn).updateBatch(entities, "salary", "updatedAt");
+            empEm.crud(conn).update(entities, "salary", "updatedAt");
         }
 
         /** Updates entities with changed snapshot detection */
@@ -104,7 +107,7 @@ public class UjormBenchmark {
 
         /** Retrieves a City from the database */
         public City getCity(Long id, Connection conn) {
-            return cityEm.crud(conn).read(id).orElse(null);
+            return cityEm.crud(conn).findById(id).orElse(null);
         }
 
         /** Retrieves employees joined with city and superior */
