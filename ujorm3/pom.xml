@@ -59,7 +59,18 @@
                             <artifactId>lombok</artifactId>
                             <version>1.18.42</version>
                         </path>
+                        <!-- APT configuration for Ujorm -->
+                        <path>
+                            <groupId>org.ujorm</groupId>
+                            <artifactId>ujorm-meta-processor</artifactId>
+                            <version>3.0.0-SNAPSHOT</version>
+                        </path>
                     </annotationProcessorPaths>
+                    <compilerArgs>
+                        <!-- Optional attributes for APT Ujorm -->
+                        <arg>-Aujorm.prefix=Meta</arg>
+                        <arg>-Aujorm.suffix=</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
 
@@ -84,43 +95,6 @@
                         <goals>
                             <goal>single</goal>
                         </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- Ujorm -->
-
-            <plugin>
-                <groupId>org.ujorm</groupId>
-                <artifactId>ujorm-meta-maven-plugin</artifactId>
-                <version>3.0.0-BETA</version>
-                <executions>
-                    <!-- 1. Zpracování produkčních entit -->
-                    <execution>
-                        <id>generate-main-meta</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>generate-meta</goal>
-                        </goals>
-                        <configuration>
-                            <prefix>Meta</prefix>
-                            <suffix>_</suffix>
-                            <testScope>false</testScope>
-                        </configuration>
-                    </execution>
-
-                    <!-- 2. Zpracování testovacích entit -->
-                    <execution>
-                        <id>generate-test-meta</id>
-                        <phase>process-test-classes</phase>
-                        <goals>
-                            <goal>generate-meta</goal>
-                        </goals>
-                        <configuration>
-                            <prefix>Meta</prefix>
-                            <suffix>_</suffix>
-                            <testScope>true</testScope>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
