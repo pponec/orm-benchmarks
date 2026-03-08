@@ -10,9 +10,9 @@ import org.benchmark.common.DatabaseUtils;
 import org.benchmark.common.EmployeeRelationView;
 import org.benchmark.common.Stopwatch;
 import org.ujorm.core.AbstractSnapshotable;
-import org.ujorm.mapper.UjormServiceProvider;
-import org.ujorm.mapper.core.EntityManager;
-import org.ujorm.mapper.jdbc.ResultSetMapper;
+import org.ujorm.orm.UjormServiceProvider;
+import org.ujorm.orm.core.EntityManager;
+import org.ujorm.orm.jdbc.ResultSetMapper;
 import org.ujorm.tools.jdbc.SqlParamBuilder;
 
 import java.math.BigDecimal;
