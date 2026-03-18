@@ -2,6 +2,7 @@ package org.benchmark.exposed
 
 import org.benchmark.common.DatabaseUtils
 import org.benchmark.common.EmployeeRelationView
+import org.benchmark.common.OrmBenchmark
 import org.benchmark.common.Stopwatch
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.date
@@ -13,7 +14,7 @@ import java.time.LocalDateTime
 import kotlin.random.Random
 
 /** Main benchmark class for Exposed */
-class ExposedBenchmark {
+class ExposedBenchmark : OrmBenchmark {
 
     /** City table mapping */
     object Cities : Table("CITY") {
@@ -211,7 +212,7 @@ class ExposedBenchmark {
     }
 
     /** Executes a batch insert test */
-    fun testBatchInsert(stopwatch: Stopwatch) {
+    override fun testBatchInsert(stopwatch: Stopwatch) {
         service.executeInTransaction { dao ->
             stopwatch.benchmark {
                 val batch = mutableListOf<Employee>()
@@ -230,7 +231,7 @@ class ExposedBenchmark {
     }
 
     /** Executes updates on selected columns */
-    fun testSpecificUpdate(stopwatch: Stopwatch) {
+    override fun testSpecificUpdate(stopwatch: Stopwatch) {
         service.executeInTransaction { dao ->
             val employees = dao.findAllEmployees()
             stopwatch.benchmark {
@@ -243,7 +244,7 @@ class ExposedBenchmark {
     }
 
     /** Executes updates on randomly modified columns */
-    fun testRandomUpdate(stopwatch: Stopwatch) {
+    override fun testRandomUpdate(stopwatch: Stopwatch) {
         val random = Random.Default
         service.executeInTransaction { dao ->
             val employees = dao.findAllEmployees()
@@ -260,7 +261,7 @@ class ExposedBenchmark {
     }
 
     /** Reads data including mapped relations */
-    fun testReadWithRelations(stopwatch: Stopwatch) {
+    override fun testReadWithRelations(stopwatch: Stopwatch) {
         service.executeReadOnly { dao ->
             stopwatch.benchmark {
                 val result = dao.findWithRelations()

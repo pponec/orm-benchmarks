@@ -14,6 +14,7 @@ import org.ujorm.orm.UjormServiceProvider;
 import org.ujorm.orm.core.EntityManager;
 import org.ujorm.orm.jdbc.ResultSetMapper;
 import org.ujorm.tools.jdbc.SqlParamBuilder;
+import org.benchmark.common.OrmBenchmark;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -25,7 +26,7 @@ import java.util.Random;
 import java.util.stream.Stream;
 
 /** Main benchmark class for Ujorm3 */
-public class UjormBenchmark {
+public class UjormBenchmark implements OrmBenchmark {
 
     /** City entity mapping */
     @Table(name = "city")

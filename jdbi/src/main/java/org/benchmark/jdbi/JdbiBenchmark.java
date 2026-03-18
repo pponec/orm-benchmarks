@@ -13,8 +13,10 @@ import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.benchmark.common.OrmBenchmark;
 
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,7 +25,7 @@ import java.util.Random;
 import java.util.function.Consumer;
 
 /** Main benchmark class for JDBI */
-public class JdbiBenchmark {
+public class JdbiBenchmark implements OrmBenchmark{
 
     /** City entity mapping */
     @Getter
@@ -115,18 +117,35 @@ public class JdbiBenchmark {
 
         /** Executes the given action inside a managed database transaction */
         public void executeInTransaction(Consumer<Dao> action) {
-            jdbi.useTransaction(handle -> {
-                var dao = handle.attach(Dao.class);
-                action.accept(dao);
+            // We use useHandle instead of useTransaction to manage the commit manually
+            this.jdbi.useHandle(handle -> {
+                try {
+                    var dao = handle.attach(Dao.class);
+                    action.accept(dao);
+                    handle.getConnection().commit(); // Explicit transaction commit
+                } catch (Exception e) {
+                    try {
+                        handle.getConnection().rollback();
+                    } catch (SQLException ex) {
+                        e.addSuppressed(ex);
+                    }
+                    throw new RuntimeException("Transaction failed", e);
+                }
             });
         }
 
         /** Executes the given action in a read-only transaction */
         public void executeReadOnly(Consumer<Dao> action) {
-            jdbi.useTransaction(handle -> {
-                handle.setReadOnly(true);
-                var dao = handle.attach(Dao.class);
-                action.accept(dao);
+            this.jdbi.useHandle(handle -> {
+                try {
+                    var connection = handle.getConnection();
+                    connection.setReadOnly(true);
+                    var dao = handle.attach(Dao.class);
+                    action.accept(dao);
+                    connection.commit(); // It is good practice to commit even read-only transactions
+                } catch (SQLException e) {
+                    throw new RuntimeException("Read-only transaction failed", e);
+                }
             });
         }
     }
