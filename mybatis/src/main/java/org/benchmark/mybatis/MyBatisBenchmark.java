@@ -18,6 +18,7 @@ import org.apache.ibatis.transaction.jdbc.JdbcTransactionFactory;
 import org.benchmark.common.DatabaseUtils;
 import org.benchmark.common.EmployeeRelationView;
 import org.benchmark.common.Stopwatch;
+import org.benchmark.common.OrmBenchmark;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -28,7 +29,7 @@ import java.util.Random;
 import java.util.function.Consumer;
 
 /** Main benchmark class for MyBatis */
-public class MyBatisBenchmark {
+public class MyBatisBenchmark implements OrmBenchmark {
 
     /** City entity mapping (Plain Java Object) */
     @Getter

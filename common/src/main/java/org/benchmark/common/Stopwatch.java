@@ -1,10 +1,5 @@
 package org.benchmark.common;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -15,14 +10,12 @@ public class Stopwatch {
     private static final LocalDateTime START = LocalDateTime.now();
     private static final DateTimeFormatter MINUTE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'_'HH:mm");
 
-    private final String testName;
-    private final String libraryName;
     private final int iterations;
     private long startTime;
+    private long endTime;
 
-    public Stopwatch(String testName, String libraryName, int iterations) {
-        this.testName = testName;
-        this.libraryName = libraryName;
+    /** Creates a new stopwatch with the specified number of iterations */
+    public Stopwatch(int iterations) {
         this.iterations = iterations;
     }
 
@@ -43,43 +36,23 @@ public class Stopwatch {
 
     /** Starts the stopwatch */
     private void start() {
-        System.gc();
         this.startTime = System.nanoTime();
     }
 
-    /** Stops the stopwatch and appends the result to a CSV file */
+    /** Stops the stopwatch */
     private void stop() {
-        var endTime = System.nanoTime();
-        saveToCsv(endTime);
+        this.endTime = System.nanoTime();
     }
 
-    private void saveToCsv(long endTime) {
-        if (iterations < 10_000) {
-            System.out.println("Warming Up: %s -> %s".formatted(libraryName, testName));
-            return;
-        }
+    /** Returns the formatted duration of the measured task */
+    public String getFormattedDuration() {
+        var durationNanos = this.endTime - this.startTime;
+        return formatDuration(durationNanos);
+    }
 
-        var userHome = System.getProperty("user.home");
-        var filePath = Path.of(userHome, "ujo-benchmark.csv");
-
-        try {
-            var isNewFile = !Files.exists(filePath) || Files.size(filePath) == 0;
-
-            try (var writer = new PrintWriter(new FileWriter(filePath.toFile(), true))) {
-                if (isNewFile) {
-                    writer.println("Start|Library|Test Name|Iterations|Duration (s)");
-                }
-
-                var durationNanos = endTime - this.startTime;
-                var formattedDuration = formatDuration(durationNanos);
-                var formattedIterations = formatInteger(iterations);
-                var formattedStart = START.format(MINUTE_FORMATTER);
-
-                writer.printf("%s|%s|%s|%s|%s%n", formattedStart, libraryName, testName, formattedIterations, formattedDuration);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    /** Gets the formatted start time */
+    public static String getFormattedStart() {
+        return START.format(MINUTE_FORMATTER);
     }
 
     /** Formats an integer to string with underscore thousands separators */
@@ -87,15 +60,9 @@ public class Stopwatch {
         return String.format(Locale.US, "%,d", number).replace(',', '_');
     }
 
-    /** Formats duration in nanoseconds to custom string with underscores */
+    /** Formats duration in nanoseconds to a string in seconds with 3 decimal places */
     public static String formatDuration(long durationNanos) {
-        var seconds = durationNanos / 1_000_000_000L;
-        var nanos = durationNanos % 1_000_000_000L;
-
-        var secString = formatInteger(seconds);
-        var nanoString = String.format(Locale.US, "%09d", nanos);
-        var fractionString = nanoString.substring(0, 3) + "_" + nanoString.substring(3, 6) + "_" + nanoString.substring(6, 9);
-
-        return secString + "." + fractionString;
+        var durationSeconds = durationNanos / 1_000_000_000.0;
+        return String.format(Locale.US, "%.3f", durationSeconds);
     }
 }

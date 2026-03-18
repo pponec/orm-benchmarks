@@ -19,6 +19,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.StatelessSession;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.cfg.Configuration;
+import org.benchmark.common.OrmBenchmark;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -30,7 +31,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /** Main benchmark class for Hibernate */
-public class HibernateBenchmark {
+public class HibernateBenchmark implements OrmBenchmark {
 
     /** City entity mapping */
     @Entity(name = "HibCity")
