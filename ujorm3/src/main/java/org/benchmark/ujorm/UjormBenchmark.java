@@ -13,7 +13,7 @@ import org.ujorm.core.AbstractSnapshotable;
 import org.ujorm.orm.UjormServiceProvider;
 import org.ujorm.orm.core.EntityManager;
 import org.ujorm.orm.jdbc.ResultSetMapper;
-import org.ujorm.tools.jdbc.SqlParamBuilder;
+import org.ujorm.tools.jdbc.SqlQuery;
 import org.benchmark.common.OrmBenchmark;
 
 import java.math.BigDecimal;
@@ -95,7 +95,7 @@ public class UjormBenchmark implements OrmBenchmark {
 
         /** Persists a batch of entities */
         public void insertBatch(List<Employee> entities, Connection conn) {
-            empEm.crud(conn).insertBatch(entities.stream(), null);
+            empEm.crud(conn).insert(entities.stream(), null);
         }
 
         /** Retrieves all employees */
@@ -103,7 +103,7 @@ public class UjormBenchmark implements OrmBenchmark {
             return empEm.crud(conn)
                     .selectWhere("", builder -> builder
                     .fetchSize(empEm.defaultBatchSize())
-                    .streamMap(empEm::map).toList());
+                    .streamMap(empEm.map()).toList());
         }
 
         /** Updates specific columns using batch */
@@ -133,8 +133,8 @@ public class UjormBenchmark implements OrmBenchmark {
                 JOIN city c ON e.city_id = c.id 
                 LEFT JOIN employee s ON e.superior_id = s.id
             """;
-            try (var builder = new SqlParamBuilder(conn)) {
-                return builder.sql(sql).fetchSize(empEm.defaultBatchSize()).streamMap(empView::map).toList();
+            try (var query = new SqlQuery(conn)) {
+                return query.sql(sql).fetchSize(empEm.defaultBatchSize()).streamMap(empView.map()).toList();
             }
         }
     }
