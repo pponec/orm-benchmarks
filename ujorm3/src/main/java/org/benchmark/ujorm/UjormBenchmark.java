@@ -13,7 +13,7 @@ import org.ujorm.core.AbstractSnapshotable;
 import org.ujorm.orm.UjormServiceProvider;
 import org.ujorm.orm.core.EntityManager;
 import org.ujorm.orm.jdbc.ResultSetMapper;
-import org.ujorm.tools.jdbc.SqlQuery;
+import org.ujorm.orm.SqlQuery;
 import org.benchmark.common.OrmBenchmark;
 
 import java.math.BigDecimal;
@@ -103,7 +103,7 @@ public class UjormBenchmark implements OrmBenchmark {
             return empEm.crud(conn)
                     .selectWhere("", builder -> builder
                     .fetchSize(empEm.defaultBatchSize())
-                    .streamMap(empEm.map()).toList());
+                    .streamMap(empEm.mapper()).toList());
         }
 
         /** Updates specific columns using batch */
@@ -134,7 +134,7 @@ public class UjormBenchmark implements OrmBenchmark {
                 LEFT JOIN employee s ON e.superior_id = s.id
             """;
             try (var query = new SqlQuery(conn)) {
-                return query.sql(sql).fetchSize(empEm.defaultBatchSize()).streamMap(empView.map()).toList();
+                return query.sql(sql).fetchSize(empEm.defaultBatchSize()).streamMap(empView.mapper()).toList();
             }
         }
     }
