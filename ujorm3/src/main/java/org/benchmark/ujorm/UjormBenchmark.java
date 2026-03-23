@@ -133,9 +133,8 @@ public class UjormBenchmark implements OrmBenchmark {
                 JOIN city c ON e.city_id = c.id 
                 LEFT JOIN employee s ON e.superior_id = s.id
             """;
-            try (var query = new SqlQuery(conn)) {
-                return query.sql(sql).fetchSize(empEm.defaultBatchSize()).streamMap(empView.mapper()).toList();
-            }
+            return SqlQuery.run(conn, query -> query
+                .sql(sql).fetchSize(empEm.defaultBatchSize()).streamMap(empView.mapper()).toList());
         }
     }
 

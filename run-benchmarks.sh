@@ -19,10 +19,16 @@ echo "Building the project using Maven Wrapper..."
 
 echo "Starting the benchmark..."
 
-# Seznam všech testovaných frameworků
-FRAMEWORKS=("HIBERNATE" "JDBI" "EXPOSED" "MYBATIS" "UJORM")
+# List of the libraries
+FRAMEWORKS="
+  HIBERNATE
+  JDBI
+  EXPOSED
+  MYBATIS
+  UJORM
+"
 
-for FRAMEWORK in "${FRAMEWORKS[@]}"; do
+for FRAMEWORK in ${FRAMEWORKS}; do
     echo "========================================================="
     echo "Running benchmark for ${FRAMEWORK}..."
     echo "========================================================="
