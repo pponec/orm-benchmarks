@@ -7,6 +7,7 @@ import org.benchmark.exposed.ExposedBenchmark;
 import org.benchmark.hibernate.HibernateBenchmark;
 import org.benchmark.jdbi.JdbiBenchmark;
 import org.benchmark.mybatis.MyBatisBenchmark;
+import org.benchmark.querydsl.QuerydslSqlBenchmark;
 import org.benchmark.ujorm.UjormBenchmark;
 
 import java.io.FileWriter;
@@ -34,6 +35,7 @@ public class BenchmarkRunner {
         JDBI("Jdbi", JdbiBenchmark::new),
         EXPOSED("Exposed", ExposedBenchmark::new),
         MYBATIS("MyBatis", MyBatisBenchmark::new),
+        QUERYDSL("QueryDsl", QuerydslSqlBenchmark::new),
         UJORM("Ujorm3", UjormBenchmark::new);
 
         /** CSV label */
