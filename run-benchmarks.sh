@@ -21,11 +21,11 @@ echo "Starting the benchmark..."
 
 # List of the libraries
 FRAMEWORKS="
-  HIBERNATE
-  JDBI
-  EXPOSED
-  MYBATIS
   UJORM
+  JDBI
+  MYBATIS
+  EXPOSED
+  HIBERNATE
 "
 
 for FRAMEWORK in ${FRAMEWORKS}; do
