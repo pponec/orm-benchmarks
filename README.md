@@ -6,7 +6,7 @@ This project compares the performance of several Java/Kotlin ORM and database ma
 * **Java Version:** 25.0.2 (java-25-amazon-corretto)
 * **Database:** H2 Database in-memory (version 2.4.240)
 * **Hardware/Memory:** ~15 GiB total RAM available (tested on a machine with 15 GiB RAM)
-* **Operation System** Ubuntu 24.04.4 LTS
+* **Operation System:** Ubuntu 24.04.4 LTS
 
 ## Tested Frameworks
 * **Hibernate Core:** `7.0.0.Final`
