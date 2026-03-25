@@ -259,7 +259,7 @@ public class JdbiBenchmark implements OrmBenchmark {
         result.setIsActive(true);
         result.setEmail("test@example.com");
         result.setPhone("123456789");
-        result.setSalary(BigDecimal.valueOf(50000));
+        result.setSalary(BigDecimal.valueOf(50_000));
         result.setDepartment("IT");
         result.setCreatedAt(LocalDateTime.now());
         result.setUpdatedAt(LocalDateTime.now());
