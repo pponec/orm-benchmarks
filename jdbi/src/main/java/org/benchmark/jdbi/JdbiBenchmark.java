@@ -25,7 +25,7 @@ import java.util.Random;
 import java.util.function.Consumer;
 
 /** Main benchmark class for JDBI */
-public class JdbiBenchmark implements OrmBenchmark{
+public class JdbiBenchmark implements OrmBenchmark {
 
     /** City entity mapping */
     @Getter
@@ -96,6 +96,10 @@ public class JdbiBenchmark implements OrmBenchmark{
         @SqlUpdate("UPDATE employee SET salary = :salary, updated_at = :updatedAt WHERE id = :id")
         void updateSalary(@BindBean Employee employee);
 
+        /** Updates salary in batch */
+        @SqlBatch("UPDATE employee SET salary = :salary, updated_at = :updatedAt WHERE id = :id")
+        void updateSalaryBatch(@BindBean List<Employee> employees);
+
         /** Updates active status and department in batch */
         @SqlBatch("UPDATE employee SET is_active = :isActive, department = :department, updated_at = :updatedAt WHERE id = :id")
         void updateRandomly(@BindBean List<Employee> employees);
@@ -117,12 +121,11 @@ public class JdbiBenchmark implements OrmBenchmark{
 
         /** Executes the given action inside a managed database transaction */
         public void executeInTransaction(Consumer<Dao> action) {
-            // We use useHandle instead of useTransaction to manage the commit manually
             this.jdbi.useHandle(handle -> {
                 try {
                     var dao = handle.attach(Dao.class);
                     action.accept(dao);
-                    handle.getConnection().commit(); // Explicit transaction commit
+                    handle.getConnection().commit();
                 } catch (Exception e) {
                     try {
                         handle.getConnection().rollback();
@@ -142,7 +145,7 @@ public class JdbiBenchmark implements OrmBenchmark{
                     connection.setReadOnly(true);
                     var dao = handle.attach(Dao.class);
                     action.accept(dao);
-                    connection.commit(); // It is good practice to commit even read-only transactions
+                    connection.commit();
                 } catch (SQLException e) {
                     throw new RuntimeException("Read-only transaction failed", e);
                 }
@@ -192,10 +195,19 @@ public class JdbiBenchmark implements OrmBenchmark{
         service.executeInTransaction(dao -> {
             var employees = dao.findAllEmployees();
             stopwatch.benchmark(() -> {
+                var batch = new ArrayList<Employee>(50);
                 for (var employee : employees) {
                     employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
                     employee.setUpdatedAt(LocalDateTime.now());
-                    dao.updateSalary(employee);
+                    batch.add(employee);
+
+                    if (batch.size() == 50) {
+                        dao.updateSalaryBatch(batch);
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    dao.updateSalaryBatch(batch);
                 }
             });
         });
