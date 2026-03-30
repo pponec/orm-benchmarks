@@ -14,7 +14,8 @@ This project compares the performance of several Java/Kotlin ORM and database ma
 * **Exposed:** `0.58.0`
 * **MyBatis:** `3.5.15`
 * **QueryDSL:** `5.1.0`
-* **Ujorm3:** `3.0.0-RC1`
+* **Spring Data JDBC:** `4.0.5`
+* **Ujorm3:** `3.0.0-RC3`
 
 ## Test Scenarios & Metrics
 All tests exclude the initial warm-up phase to ensure accurate JIT compilation and memory allocation measurements. The default number of iterations is **500,000**. The table columns represent the following metrics:
@@ -30,12 +31,13 @@ All tests exclude the initial warm-up phase to ensure accurate JIT compilation a
 
 | Library | Batch<br/>Insert [s] | Specific<br/>Update [s] | Random<br/>Update [s] | Read Rel.<br/>[s] | Mem Insert<br/>[B/op] | Mem Update<br/>[B/op] | Mem Rand<br/>Upd [B/op] | Mem Read<br/>[B/op] | JAR Size<br/>[MB] |
 |:--------|---------------------:|------------------------:|----------------------:|------------------:|----------------------:|----------------------:|------------------------:|--------------------:|------------------:|
-| Ujorm3 | **1.288** | **4.008** | **4.261** | **0.297** | **11_876** | **36_230** | **36_715** | **1_081** | **2.76** |
-| MyBatis | 1.680 | 5.174 | 5.320 | 0.564 | 12_809 | 39_718 | 39_553 | 3_478 | 4.27 |
-| Jdbi | 1.641 | 8.928 | 4.437 | 0.355 | 13_662 | 54_899 | 39_965 | 1_702 | 3.89 |
-| Hibernate | 2.572 | 8.130 | 8.254 | 0.330 | 16_413 | 53_398 | 53_335 | 1_158 | 25.68 |
-| Exposed | 3.436 | 6.599 | 6.695 | 1.220 | 23_271 | 48_880 | 46_692 | 3_331 | 9.80 |
-| QueryDsl | 4.866 | 8.365 | 9.329 | 0.346 | 45_169 | 73_136 | 74_814 | 1_159 | 3.46 |
+| Ujorm3 | **1.300** | **4.055** | **4.323** | **0.240** | **11_875** | **36_150** | **36_637** | **1_081** | **2.76** |
+| Jdbi | 1.547 | 4.348 | 4.333 | 0.352 | 13_664 | 40_084 | 40_190 | 1_638 | 3.89 |
+| MyBatis | 1.668 | 5.228 | 5.286 | 0.561 | 12_841 | 39_638 | 39_473 | 3_558 | 4.27 |
+| Hibernate | 2.668 | 8.221 | 8.302 | 0.325 | 16_348 | 53_605 | 53_543 | 1_158 | 25.68 |
+| Exposed | 3.549 | 6.504 | 6.203 | 1.343 | 23_317 | 49_088 | 46_898 | 3_811 | 9.80 |
+| QueryDsl | 4.964 | 8.378 | 9.361 | 0.303 | 45_201 | 73_257 | 74_935 | 1_159 | 3.46 |
+| SpringJdbc | 5.689 | 9.042 | 9.076 | 0.333 | 23_534 | 51_990 | 52_069 | 1_094 | 14.62 |
 
 ---
 

@@ -17,8 +17,10 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.datasource.AbstractDataSource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -103,7 +105,10 @@ public class SpringDataJdbcBenchmark implements OrmBenchmark {
             CityRepository cityRepository,
 
             /** Returns the JDBC template */
-            JdbcTemplate jdbcTemplate
+            JdbcTemplate jdbcTemplate,
+
+            /** Returns NamedParameterJdbcOperations for explicit batch updates */
+            NamedParameterJdbcOperations namedParameterJdbcOperations
     ) {
         /** Persists a new entity to the database */
         public void insert(Employee employee) {
@@ -113,6 +118,40 @@ public class SpringDataJdbcBenchmark implements OrmBenchmark {
         /** Persists multiple entities in a batch */
         public void insertMultiple(Iterable<Employee> employees) {
             employeeRepository.saveAll(employees);
+        }
+
+        /**
+         * Executes an explicit batch update for specific fields.
+         * Bypasses CrudRepository.saveAll() to force JDBC batching and partial updates.
+         */
+        public void batchUpdateSpecific(List<Employee> batch) {
+            var sql = "UPDATE EMPLOYEE SET SALARY = :salary, UPDATED_AT = :updatedAt WHERE ID = :id";
+            var params = new SqlParameterSource[batch.size()];
+            for (int i = 0; i < batch.size(); i++) {
+                var emp = batch.get(i);
+                params[i] = new MapSqlParameterSource()
+                        .addValue("salary", emp.getSalary())
+                        .addValue("updatedAt", emp.getUpdatedAt())
+                        .addValue("id", emp.getId());
+            }
+            namedParameterJdbcOperations.batchUpdate(sql, params);
+        }
+
+        /**
+         * Executes an explicit batch update for random fields.
+         */
+        public void batchUpdateRandom(List<Employee> batch) {
+            var sql = "UPDATE EMPLOYEE SET IS_ACTIVE = :isActive, DEPARTMENT = :department, UPDATED_AT = :updatedAt WHERE ID = :id";
+            var params = new SqlParameterSource[batch.size()];
+            for (int i = 0; i < batch.size(); i++) {
+                var emp = batch.get(i);
+                params[i] = new MapSqlParameterSource()
+                        .addValue("isActive", emp.getIsActive())
+                        .addValue("department", emp.getDepartment())
+                        .addValue("updatedAt", emp.getUpdatedAt())
+                        .addValue("id", emp.getId());
+            }
+            namedParameterJdbcOperations.batchUpdate(sql, params);
         }
 
         /** Retrieves all employees as a stream for efficient processing */
@@ -198,7 +237,8 @@ public class SpringDataJdbcBenchmark implements OrmBenchmark {
             this.dao = new Dao(
                     context.getBean(EmployeeRepository.class),
                     context.getBean(CityRepository.class),
-                    context.getBean(JdbcTemplate.class)
+                    context.getBean(JdbcTemplate.class),
+                    context.getBean(NamedParameterJdbcOperations.class)
             );
         }
 
@@ -279,13 +319,13 @@ public class SpringDataJdbcBenchmark implements OrmBenchmark {
                         batch.add(employee);
 
                         if (++count % BATCH_SIZE == 0) {
-                            dao.insertMultiple(batch);
+                            dao.batchUpdateSpecific(batch);
                             batch.clear();
                         }
                     }
                 }
                 if (!batch.isEmpty()) {
-                    dao.insertMultiple(batch);
+                    dao.batchUpdateSpecific(batch);
                 }
             });
         });
@@ -309,13 +349,13 @@ public class SpringDataJdbcBenchmark implements OrmBenchmark {
                         batch.add(employee);
 
                         if (++count % BATCH_SIZE == 0) {
-                            dao.insertMultiple(batch);
+                            dao.batchUpdateRandom(batch);
                             batch.clear();
                         }
                     }
                 }
                 if (!batch.isEmpty()) {
-                    dao.insertMultiple(batch);
+                    dao.batchUpdateRandom(batch);
                 }
             });
         });
