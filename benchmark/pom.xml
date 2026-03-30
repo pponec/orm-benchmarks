@@ -43,7 +43,12 @@
         </dependency>
         <dependency>
             <groupId>org.benchmark</groupId>
-            <artifactId>querydsl-sql</artifactId>
+            <artifactId>querydsl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.benchmark</groupId>
+            <artifactId>spring-data-jdbc</artifactId>
             <version>${project.version}</version>
         </dependency>
 

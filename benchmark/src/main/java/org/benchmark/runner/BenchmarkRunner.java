@@ -8,6 +8,7 @@ import org.benchmark.hibernate.HibernateBenchmark;
 import org.benchmark.jdbi.JdbiBenchmark;
 import org.benchmark.mybatis.MyBatisBenchmark;
 import org.benchmark.querydsl.QuerydslSqlBenchmark;
+import org.benchmark.springdatajdbc.SpringDataJdbcBenchmark;
 import org.benchmark.ujorm.UjormBenchmark;
 
 import java.io.FileWriter;
@@ -31,20 +32,25 @@ public class BenchmarkRunner {
     /** Enum representing the tested framework */
     @RequiredArgsConstructor
     public enum Framework {
-        HIBERNATE("Hibernate", HibernateBenchmark::new),
-        JDBI("Jdbi", JdbiBenchmark::new),
-        EXPOSED("Exposed", ExposedBenchmark::new),
-        MYBATIS("MyBatis", MyBatisBenchmark::new),
-        QUERYDSL("QueryDsl", QuerydslSqlBenchmark::new),
-        UJORM("Ujorm3", UjormBenchmark::new);
+        HIBERNATE("Hibernate", "hibernate", HibernateBenchmark::new),
+        SPRINGJDBC("SpringJdbc", "spring-data-jdbc", SpringDataJdbcBenchmark::new),
+        JDBI("Jdbi", "jdbi", JdbiBenchmark::new),
+        EXPOSED("Exposed", "exposed", ExposedBenchmark::new),
+        MYBATIS("MyBatis", "mybatis", MyBatisBenchmark::new),
+        QUERYDSL("QueryDsl", "querydsl", QuerydslSqlBenchmark::new),
+        UJORM("Ujorm3", "ujorm3", UjormBenchmark::new);
 
         /** CSV label */
         private final String label;
+        /** Maven artifact ID prefix for JAR size lookup */
+        private final String jarPrefix;
         /** Test object provider */
         private final Supplier<OrmBenchmark> supplier;
 
         /** Gets label */
         public String getLabel() { return label; }
+        /** Gets JAR prefix */
+        public String getJarPrefix() { return jarPrefix; }
         /** Gets supplier */
         public Supplier<OrmBenchmark> getSupplier() { return supplier; }
     }
@@ -156,8 +162,7 @@ public class BenchmarkRunner {
         }
 
         // 3. Calculate JAR size for the specific framework
-        var jarPrefix = framework.getLabel().toLowerCase();
-        var jarSizeMb = getJarSizeMb(jarPrefix);
+        var jarSizeMb = getJarSizeMb(framework.getJarPrefix());
 
         saveToCsv(framework.getLabel(), iterations, durations, memoryAllocations, jarSizeMb);
         System.out.println("Benchmark finished. Results appended to ~/%s".formatted(CSV_FILE));

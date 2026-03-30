@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="[http://maven.apache.org/POM/4.0.0](http://maven.apache.org/POM/4.0.0)"
+         xmlns:xsi="[http://www.w3.org/2001/XMLSchema-instance](http://www.w3.org/2001/XMLSchema-instance)"
+         xsi:schemaLocation="[http://maven.apache.org/POM/4.0.0](http://maven.apache.org/POM/4.0.0) [http://maven.apache.org/xsd/maven-4.0.0.xsd](http://maven.apache.org/xsd/maven-4.0.0.xsd)">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.benchmark</groupId>
@@ -20,8 +20,9 @@
         <kotlin.version>2.3.0</kotlin.version>
         <mybatis.version>3.5.15</mybatis.version>
         <querydsl.version>5.1.0</querydsl.version>
-        <ujorm.version>3.0.0-RC2</ujorm.version>
+        <ujorm.version>3.0.0-RC3</ujorm.version>
         <jakarta.persistence.version>3.1.0</jakarta.persistence.version>
+        <spring-boot.version>4.0.5</spring-boot.version>
     </properties>
 
     <modules>
@@ -33,6 +34,7 @@
         <module>mybatis</module>
         <module>querydsl</module>
         <module>ujorm3</module>
+        <module>springdatajdbc</module>
     </modules>
 
     <dependencyManagement>
@@ -46,6 +48,11 @@
                 <groupId>org.benchmark</groupId>
                 <artifactId>common</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-data-jdbc</artifactId>
+                <version>${spring-boot.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

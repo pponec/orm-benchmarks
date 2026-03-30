@@ -9,11 +9,7 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>querydsl</artifactId>
-
-    <properties>
-        <querydsl.version>5.1.0</querydsl.version>
-    </properties>
+    <artifactId>spring-data-jdbc</artifactId>
 
     <dependencies>
         <dependency>
@@ -22,9 +18,9 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.querydsl</groupId>
-            <artifactId>querydsl-sql</artifactId>
-            <version>${querydsl.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jdbc</artifactId>
+            <version>${spring-boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -52,39 +48,6 @@
             </plugin>
 
             <plugin>
-                <groupId>com.querydsl</groupId>
-                <artifactId>querydsl-maven-plugin</artifactId>
-                <version>${querydsl.version}</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>export</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <jdbcDriver>org.h2.Driver</jdbcDriver>
-                    <jdbcUrl>jdbc:h2:mem:benchmark;INIT=RUNSCRIPT FROM '${project.basedir}/src/main/resources/schema.sql'</jdbcUrl>
-                    <jdbcUser>sa</jdbcUser>
-                    <packageName>org.benchmark.querydsl.sql.model</packageName>
-                    <targetFolder>${project.basedir}/target/generated-sources/java</targetFolder>
-
-                    <customTypes>
-                        <customType>com.querydsl.sql.types.JSR310LocalDateTimeType</customType>
-                        <customType>com.querydsl.sql.types.JSR310LocalDateType</customType>
-                    </customTypes>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.h2database</groupId>
-                        <artifactId>h2</artifactId>
-                        <version>2.2.224</version>
-                    </dependency>
-                </dependencies>
-            </plugin>
-
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.7.1</version>
@@ -94,7 +57,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>org.benchmark.querydsl.sql.Main</mainClass>
+                            <mainClass>org.benchmark.springdatajdbc.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
