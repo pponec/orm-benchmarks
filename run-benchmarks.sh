@@ -3,6 +3,9 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# The report file
+REPORT="$HOME/ujo-benchmark.csv"
+
 # Change the current working directory to the directory of this script
 cd "$(dirname "$0")" || exit 1
 
@@ -27,7 +30,7 @@ FRAMEWORKS="
   HIBERNATE
   EXPOSED
   QUERYDSL
-  SPRINGJDBC
+  JOOQ
 "
 
 for FRAMEWORK in ${FRAMEWORKS}; do
@@ -37,4 +40,5 @@ for FRAMEWORK in ${FRAMEWORKS}; do
     ./mvnw exec:java -pl "${MODULE}" -Dexec.mainClass="${MAIN_CLASS}" -Dexec.args="${FRAMEWORK} ${ITERATIONS}"
 done
 
-echo "Benchmark execution finished."
+cat "$REPORT"
+echo "Benchmark execution finished, see the report: $REPORT"

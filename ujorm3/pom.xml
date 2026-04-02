@@ -68,8 +68,9 @@
                     </annotationProcessorPaths>
                     <compilerArgs>
                         <!-- Optional attributes for APT Ujorm -->
-                        <arg>-Aujorm.prefix=Meta</arg>
+                        <arg>-Aujorm.prefix=Q</arg>
                         <arg>-Aujorm.suffix=</arg>
+                        <arg>-Aujorm.metaPackage=meta</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

@@ -9,4 +9,6 @@ public interface OrmBenchmark {
     void testRandomUpdate(Stopwatch stopwatch);
 
     void testReadWithRelations(Stopwatch stopwatch);
+
+    void testReadRelatedEntities(Stopwatch stopwatch);
 }

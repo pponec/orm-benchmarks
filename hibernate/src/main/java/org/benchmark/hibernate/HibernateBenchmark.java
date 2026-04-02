@@ -277,18 +277,35 @@ public class HibernateBenchmark implements OrmBenchmark {
         });
     }
 
-    /** Reads data including mapped relations */
+    /** Reads data into a DTO projection */
     public void testReadWithRelations(Stopwatch stopwatch) {
         service.executeReadOnly(session -> {
-            var query = session.createQuery(
-                    "select new org.benchmark.common.EmployeeRelationView(" +
-                            "e.id, " +
-                            "e.name, " +
-                            "c.name, " +
-                            "s.name) " +
-                            "from HibEmployee e " +
-                            "join e.city c left join e.superior s",
-                    EmployeeRelationView.class);
+            var query = session.createQuery("""
+                    select new org.benchmark.common.EmployeeRelationView(
+                        e.id,
+                        e.name,
+                        c.name,
+                        s.name
+                    )
+                    from HibEmployee e
+                    join e.city c
+                    left join e.superior s
+                    """, EmployeeRelationView.class);
+
+            stopwatch.benchmark(query::list);
+        });
+    }
+
+    /** Reads full entities including mapped relations using fetch joins */
+    @Override
+    public void testReadRelatedEntities(Stopwatch stopwatch) {
+        service.executeReadOnly(session -> {
+            var query = session.createQuery("""
+                    select e
+                    from HibEmployee e
+                    join fetch e.city c
+                    left join fetch e.superior s
+                    """, Employee.class);
 
             stopwatch.benchmark(query::list);
         });

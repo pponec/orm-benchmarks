@@ -9,12 +9,14 @@ import lombok.Setter;
 import org.benchmark.common.DatabaseUtils;
 import org.benchmark.common.EmployeeRelationView;
 import org.benchmark.common.Stopwatch;
+import org.benchmark.ujorm.meta.*;
 import org.ujorm.core.AbstractSnapshotable;
-import org.ujorm.orm.UjormServiceProvider;
 import org.ujorm.orm.core.EntityManager;
+import org.ujorm.orm.dsl.DslQuery;
 import org.ujorm.orm.jdbc.ResultSetMapper;
 import org.ujorm.orm.SqlQuery;
 import org.benchmark.common.OrmBenchmark;
+import org.ujorm.orm.utils.EntityContext;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -84,9 +86,10 @@ public class UjormBenchmark implements OrmBenchmark {
     /** Data Access Object for entities */
     public static class Dao {
 
-        static final EntityManager<Employee, Long> empEm = UjormServiceProvider.em(Employee.class, Long.class);
-        static final EntityManager<City, Long> cityEm = UjormServiceProvider.em(City.class, Long.class);
-        static final ResultSetMapper<EmployeeRelationView> empView = UjormServiceProvider.map(EmployeeRelationView.class);
+        static final EntityContext ctx = EntityContext.ofDefault();
+        static final EntityManager<Employee, Long> empEm = ctx.entityManager(Employee.class, Long.class);
+        static final EntityManager<City, Long> cityEm = ctx.entityManager(City.class, Long.class);
+        static final ResultSetMapper<EmployeeRelationView> empView = ResultSetMapper.of(EmployeeRelationView.class);
 
         /** Persists a single entity to the database */
         public void insert(Employee entity, Connection conn) {
@@ -102,8 +105,8 @@ public class UjormBenchmark implements OrmBenchmark {
         public List<Employee> findAllEmployees(Connection conn) {
             return empEm.crud(conn)
                     .selectWhere("", builder -> builder
-                    .fetchSize(empEm.defaultBatchSize())
-                    .streamMap(empEm.mapper()).toList());
+                            .fetchSize(empEm.defaultBatchSize())
+                            .streamMap(empEm.mapper()).toList());
         }
 
         /** Updates specific columns using batch */
@@ -125,16 +128,57 @@ public class UjormBenchmark implements OrmBenchmark {
         /** Retrieves employees joined with city and superior */
         public List<EmployeeRelationView> findWithRelations(Connection conn) {
             var sql = """
-                SELECT e.id
-                , e.name
-                , c.name AS "cityName"
-                , s.name AS "superiorName" 
-                FROM employee e 
+                SELECT e.id AS ${e.id}
+                , e.name    AS ${e.name}
+                , c.name    AS ${c.name}
+                , s.name    AS ${s.name}
+                FROM employee e
                 JOIN city c ON e.city_id = c.id 
                 LEFT JOIN employee s ON e.superior_id = s.id
             """;
             return SqlQuery.run(conn, query -> query
-                .sql(sql).fetchSize(empEm.defaultBatchSize()).streamMap(empView.mapper()).toList());
+                    .sql(sql)
+                    .label("e.id"  , QEmployeeRelationView.id)
+                    .label("e.name", QEmployeeRelationView.name)
+                    .label("c.name", QEmployeeRelationView.cityName)
+                    .label("s.name", QEmployeeRelationView.superiorName)
+                    .fetchSize(empEm.defaultBatchSize())
+                    .streamMap(empView.mapper())
+                    .toList());
+        }
+
+        /** Retrieves full entities mapped into an object graph from a single query */
+        public List<Employee> findEntitiesWithRelations(Connection conn) {
+            return DslQuery.run(conn, empEm, query -> query
+                    .sql("SELECT")
+                    .columnsOfDomain(false)
+                    // --- CITY RELATION ---
+                    .column(QEmployee.city, QCity.id)
+                    .column(QEmployee.city, QCity.name)
+                    .column(QEmployee.city, QCity.countryCode)
+                    .column(QEmployee.city, QCity.latitude)
+                    .column(QEmployee.city, QCity.longitude)
+                    .column(QEmployee.city, QCity.createdAt)
+                    .column(QEmployee.city, QCity.createdBy)
+                    .column(QEmployee.city, QCity.updatedAt)
+                    .column(QEmployee.city, QCity.updatedBy)
+                    // --- SUPERIOR RELATION ---
+                    .column(QEmployee.superior, QEmployee.id)
+                    .column(QEmployee.superior, QEmployee.name)
+                    .column(QEmployee.superior, QEmployee.contractDay)
+                    .column(QEmployee.superior, QEmployee.department)
+                    .column(QEmployee.superior, QEmployee.email)
+                    .column(QEmployee.superior, QEmployee.isActive)
+                    .column(QEmployee.superior, QEmployee.phone)
+                    .column(QEmployee.superior, QEmployee.salary)
+                    .column(QEmployee.superior, QEmployee.createdAt)
+                    .column(QEmployee.superior, QEmployee.createdBy)
+                    .column(QEmployee.superior, QEmployee.updatedAt)
+                    .column(QEmployee.superior, QEmployee.updatedBy)
+                    // --- EXECUTION ---
+                    .fetchSize(empEm.defaultBatchSize())
+                    .streamMap(empEm.mapper())
+                    .toList());
         }
     }
 
@@ -265,6 +309,16 @@ public class UjormBenchmark implements OrmBenchmark {
         service.executeReadOnly((dao, conn) -> {
             stopwatch.benchmark(() -> {
                 var result = dao.findWithRelations(conn);
+            });
+        });
+    }
+
+    /** Reads full entities including mapped relations */
+    @Override
+    public void testReadRelatedEntities(Stopwatch stopwatch) {
+        service.executeReadOnly((dao, conn) -> {
+            stopwatch.benchmark(() -> {
+                var result = dao.findEntitiesWithRelations(conn);
             });
         });
     }

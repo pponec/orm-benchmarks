@@ -20,7 +20,7 @@
         <kotlin.version>2.3.0</kotlin.version>
         <mybatis.version>3.5.15</mybatis.version>
         <querydsl.version>5.1.0</querydsl.version>
-        <ujorm.version>3.0.0-RC3</ujorm.version>
+        <ujorm.version>3.0.0-RC4</ujorm.version>
         <jakarta.persistence.version>3.1.0</jakarta.persistence.version>
         <spring-boot.version>4.0.5</spring-boot.version>
     </properties>
@@ -35,6 +35,7 @@
         <module>querydsl</module>
         <module>ujorm3</module>
         <module>springdatajdbc</module>
+        <module>jooq</module>
     </modules>
 
     <dependencyManagement>
