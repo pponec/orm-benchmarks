@@ -6,6 +6,7 @@ import org.benchmark.common.Stopwatch;
 import org.benchmark.exposed.ExposedBenchmark;
 import org.benchmark.hibernate.HibernateBenchmark;
 import org.benchmark.jdbi.JdbiBenchmark;
+import org.benchmark.jooq.JooqBenchmark;
 import org.benchmark.mybatis.MyBatisBenchmark;
 import org.benchmark.querydsl.QuerydslSqlBenchmark;
 import org.benchmark.springdatajdbc.SpringDataJdbcBenchmark;
@@ -33,11 +34,11 @@ public class BenchmarkRunner {
     @RequiredArgsConstructor
     public enum Framework {
         HIBERNATE("Hibernate", "hibernate", HibernateBenchmark::new),
-        SPRINGJDBC("SpringJdbc", "spring-data-jdbc", SpringDataJdbcBenchmark::new),
         JDBI("Jdbi", "jdbi", JdbiBenchmark::new),
         EXPOSED("Exposed", "exposed", ExposedBenchmark::new),
         MYBATIS("MyBatis", "mybatis", MyBatisBenchmark::new),
         QUERYDSL("QueryDsl", "querydsl", QuerydslSqlBenchmark::new),
+        JOOQ("Jooq", "jooq", JooqBenchmark::new),
         UJORM("Ujorm3", "ujorm3", UjormBenchmark::new);
 
         /** CSV label */
@@ -60,7 +61,8 @@ public class BenchmarkRunner {
         BATCH_INSERT("Batch Insert", OrmBenchmark::testBatchInsert),
         SPECIFIC_UPDATE("Specific Update", OrmBenchmark::testSpecificUpdate),
         RANDOM_UPDATE("Random Update", OrmBenchmark::testRandomUpdate),
-        READ_WITH_RELATIONS("Read With Relations", OrmBenchmark::testReadWithRelations);
+        READ_WITH_RELATIONS("Read With Relations", OrmBenchmark::testReadWithRelations),
+        READ_ENTITY_RELATIONS("Read Related Entities", OrmBenchmark::testReadRelatedEntities);
 
         private final String label;
         private final BiConsumer<OrmBenchmark, Stopwatch> action;

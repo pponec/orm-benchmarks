@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.benchmark.common.DatabaseUtils;
 import org.benchmark.common.Stopwatch;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.Nested;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.jdbi.v3.sqlobject.config.RegisterBeanMapper;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
@@ -42,7 +43,7 @@ public class JdbiBenchmark implements OrmBenchmark {
         private String updatedBy;
     }
 
-    /** Employee entity mapping */
+    /** Flat Employee entity mapping */
     @Getter
     @Setter
     public static class Employee {
@@ -62,15 +63,37 @@ public class JdbiBenchmark implements OrmBenchmark {
         private String updatedBy;
     }
 
+    /** Rich Domain Object representing the full object graph (for reads) */
+    @Getter
+    @Setter
+    public static class RichEmployee {
+        private Long id;
+        private String name;
+        @Nested("c_")
+        private City city;
+        @Nested("s_")
+        private Employee superior;
+        private LocalDate contractDay;
+        private Boolean isActive;
+        private String email;
+        private String phone;
+        private BigDecimal salary;
+        private String department;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        private String createdBy;
+        private String updatedBy;
+    }
+
     /** Data transfer object for employee relations */
     public record EmployeeRelationView(
-            /** The ID of the employee */
+            /** Gets the ID of the employee. */
             Long id,
-            /** The name of the employee */
+            /** Gets the name of the employee. */
             String name,
-            /** The name of the city */
+            /** Gets the name of the city. */
             String cityName,
-            /** The name of the superior */
+            /** Gets the name of the superior. */
             String superiorName
     ) {
     }
@@ -80,12 +103,24 @@ public class JdbiBenchmark implements OrmBenchmark {
     public interface Dao {
 
         /** Inserts a new employee and returns the generated ID */
-        @SqlUpdate("INSERT INTO employee (name, superior_id, city_id, contract_day, is_active, email, phone, salary, department, created_at, updated_at, created_by, updated_by) VALUES (:name, :superiorId, :cityId, :contractDay, :isActive, :email, :phone, :salary, :department, :createdAt, :updatedAt, :createdBy, :updatedBy)")
+        @SqlUpdate("""
+            INSERT INTO employee (
+                name, superior_id, city_id, contract_day, is_active, email, phone, salary, department, created_at, updated_at, created_by, updated_by
+            ) VALUES (
+                :name, :superiorId, :cityId, :contractDay, :isActive, :email, :phone, :salary, :department, :createdAt, :updatedAt, :createdBy, :updatedBy
+            )
+            """)
         @GetGeneratedKeys("id")
         Long insert(@BindBean Employee employee);
 
         /** Inserts a batch of employees */
-        @SqlBatch("INSERT INTO employee (name, superior_id, city_id, contract_day, is_active, email, phone, salary, department, created_at, updated_at, created_by, updated_by) VALUES (:name, :superiorId, :cityId, :contractDay, :isActive, :email, :phone, :salary, :department, :createdAt, :updatedAt, :createdBy, :updatedBy)")
+        @SqlBatch("""
+            INSERT INTO employee (
+                name, superior_id, city_id, contract_day, is_active, email, phone, salary, department, created_at, updated_at, created_by, updated_by
+            ) VALUES (
+                :name, :superiorId, :cityId, :contractDay, :isActive, :email, :phone, :salary, :department, :createdAt, :updatedAt, :createdBy, :updatedBy
+            )
+            """)
         void insertBatch(@BindBean List<Employee> employees);
 
         /** Retrieves all employees */
@@ -93,21 +128,82 @@ public class JdbiBenchmark implements OrmBenchmark {
         List<Employee> findAllEmployees();
 
         /** Updates salary for a specific employee */
-        @SqlUpdate("UPDATE employee SET salary = :salary, updated_at = :updatedAt WHERE id = :id")
+        @SqlUpdate("""
+            UPDATE employee
+            SET salary = :salary, updated_at = :updatedAt
+            WHERE id = :id
+            """)
         void updateSalary(@BindBean Employee employee);
 
         /** Updates salary in batch */
-        @SqlBatch("UPDATE employee SET salary = :salary, updated_at = :updatedAt WHERE id = :id")
+        @SqlBatch("""
+            UPDATE employee
+            SET salary = :salary, updated_at = :updatedAt
+            WHERE id = :id
+            """)
         void updateSalaryBatch(@BindBean List<Employee> employees);
 
         /** Updates active status and department in batch */
-        @SqlBatch("UPDATE employee SET is_active = :isActive, department = :department, updated_at = :updatedAt WHERE id = :id")
+        @SqlBatch("""
+            UPDATE employee
+            SET is_active = :isActive, department = :department, updated_at = :updatedAt
+            WHERE id = :id
+            """)
         void updateRandomly(@BindBean List<Employee> employees);
 
         /** Retrieves employees joined with city and superior */
-        @SqlQuery("SELECT e.id, e.name, c.name AS city_name, s.name AS superior_name FROM employee e JOIN city c ON e.city_id = c.id LEFT JOIN employee s ON e.superior_id = s.id")
+        @SqlQuery("""
+            SELECT e.id, e.name, c.name AS city_name, s.name AS superior_name
+            FROM employee e
+            JOIN city c ON e.city_id = c.id
+            LEFT JOIN employee s ON e.superior_id = s.id
+            """)
         @RegisterConstructorMapper(EmployeeRelationView.class)
         List<EmployeeRelationView> findWithRelations();
+
+        /** Retrieves full entities mapped into an object graph from a single query */
+        @SqlQuery("""
+            SELECT e.id
+                 , e.name
+                 , e.contract_day
+                 , e.is_active
+                 , e.email
+                 , e.phone
+                 , e.salary
+                 , e.department
+                 , e.created_at
+                 , e.updated_at
+                 , e.created_by
+                 , e.updated_by
+                 , c.id AS c_id
+                 , c.name AS c_name
+                 , c.country_code AS c_country_code
+                 , c.latitude AS c_latitude
+                 , c.longitude AS c_longitude
+                 , c.created_at AS c_created_at
+                 , c.updated_at AS c_updated_at
+                 , c.created_by AS c_created_by
+                 , c.updated_by AS c_updated_by
+                 , s.id AS s_id
+                 , s.name AS s_name
+                 , s.superior_id AS s_superior_id
+                 , s.city_id AS s_city_id
+                 , s.contract_day AS s_contract_day
+                 , s.is_active AS s_is_active
+                 , s.email AS s_email
+                 , s.phone AS s_phone
+                 , s.salary AS s_salary
+                 , s.department AS s_department
+                 , s.created_at AS s_created_at
+                 , s.updated_at AS s_updated_at
+                 , s.created_by AS s_created_by
+                 , s.updated_by AS s_updated_by
+            FROM employee e
+            JOIN city c ON e.city_id = c.id
+            LEFT JOIN employee s ON e.superior_id = s.id
+            """)
+        @RegisterBeanMapper(RichEmployee.class)
+        List<RichEmployee> findEntitiesWithRelations();
     }
 
     /** Service layer managing transactions */
@@ -246,6 +342,16 @@ public class JdbiBenchmark implements OrmBenchmark {
         service.executeReadOnly(dao -> {
             stopwatch.benchmark(() -> {
                 var result = dao.findWithRelations();
+            });
+        });
+    }
+
+    /** Reads full entities including mapped relations */
+    @Override
+    public void testReadRelatedEntities(Stopwatch stopwatch) {
+        service.executeReadOnly(dao -> {
+            stopwatch.benchmark(() -> {
+                var result = dao.findEntitiesWithRelations();
             });
         });
     }

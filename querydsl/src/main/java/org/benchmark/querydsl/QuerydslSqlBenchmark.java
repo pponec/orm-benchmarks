@@ -25,9 +25,7 @@ import java.util.stream.Stream;
 /** Main benchmark class for QueryDSL SQL */
 public class QuerydslSqlBenchmark implements OrmBenchmark {
 
-    /** City entity as a plain POJO */
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class City {
         private Long id;
         private String name;
@@ -40,9 +38,7 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         private String updatedBy;
     }
 
-    /** Employee entity as a plain POJO */
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class Employee {
         private Long id;
         private String name;
@@ -60,7 +56,24 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         private String updatedBy;
     }
 
-    /** Data Access Object for direct SQL queries */
+    @Getter @Setter
+    public static class RichEmployee {
+        private Long id;
+        private String name;
+        private City city;
+        private RichEmployee superior;
+        private LocalDate contractDay;
+        private Boolean isActive;
+        private String email;
+        private String phone;
+        private BigDecimal salary;
+        private String department;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        private String createdBy;
+        private String updatedBy;
+    }
+
     public static class Dao {
         private final SQLQueryFactory queryFactory;
         private final QEmployee qEmployee = QEmployee.employee;
@@ -72,7 +85,6 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
             this.queryFactory = new SQLQueryFactory(configuration, () -> connection);
         }
 
-        /** Inserts a new entity using bean population */
         public void insert(Employee employee) {
             var result = queryFactory.insert(qEmployee)
                     .populate(employee)
@@ -80,14 +92,12 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
             employee.setId(result);
         }
 
-        /** Retrieves all employees as a stream */
         public Stream<Employee> streamAllEmployees() {
             return queryFactory.select(Projections.bean(Employee.class, qEmployee.all()))
                     .from(qEmployee)
                     .stream();
         }
 
-        /** Retrieves a City directly via SQL */
         public City getCity(Long id) {
             var result = queryFactory.select(Projections.bean(City.class, qCity.all()))
                     .from(qCity)
@@ -100,16 +110,12 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
             return result;
         }
 
-        /** Provides access to the query factory for custom batching */
         public SQLQueryFactory getQueryFactory() {
             return queryFactory;
         }
     }
 
-    /** Service layer managing explicit JDBC transactions */
     public static class Service {
-
-        /** Executes the given action inside a managed JDBC transaction */
         public void executeInTransaction(Consumer<Dao> action) {
             try (var connection = DatabaseUtils.getConnection()) {
                 connection.setAutoCommit(false);
@@ -132,20 +138,17 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         this.service = new Service();
     }
 
-    /** Executes a single row insert test */
     public void testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
             stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
-                    var employee = createRandomEmployee(city);
-                    dao.insert(employee);
+                    dao.insert(createRandomEmployee(city));
                 }
             });
         });
     }
 
-    /** Executes a batch insert test using JDBC batching */
     public void testBatchInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
@@ -157,9 +160,7 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                 var count = 0;
 
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
-                    var employee = createRandomEmployee(city);
-                    insertClause.populate(employee).addBatch();
-
+                    insertClause.populate(createRandomEmployee(city)).addBatch();
                     if (++count % 50 == 0) {
                         insertClause.execute();
                         insertClause = queryFactory.insert(qEmployee);
@@ -172,7 +173,6 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         });
     }
 
-    /** Executes updates by firing specific UPDATE statements */
     public void testSpecificUpdate(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
@@ -185,10 +185,8 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                 try (var stream = dao.streamAllEmployees()) {
                     for (var employee : (Iterable<Employee>) stream::iterator) {
                         var newSalary = employee.getSalary().add(BigDecimal.valueOf(1000));
-                        var newUpdatedAt = LocalDateTime.now();
-
                         updateClause.set(qEmployee.salary, newSalary)
-                                .set(qEmployee.updatedAt, newUpdatedAt)
+                                .set(qEmployee.updatedAt, LocalDateTime.now())
                                 .where(qEmployee.id.eq(employee.getId()))
                                 .addBatch();
 
@@ -205,7 +203,6 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         });
     }
 
-    /** Executes random column updates via SQL batches */
     public void testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
         service.executeInTransaction(dao -> {
@@ -213,29 +210,23 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
             var qEmployee = QEmployee.employee;
 
             stopwatch.benchmark(() -> {
-                var count = 0;
                 try (var stream = dao.streamAllEmployees()) {
                     for (var employee : (Iterable<Employee>) stream::iterator) {
                         var updateClause = queryFactory.update(qEmployee);
-
                         if (random.nextBoolean()) {
                             updateClause.set(qEmployee.isActive, !employee.getIsActive());
                         } else {
                             updateClause.set(qEmployee.department, "Dept-" + random.nextInt(100));
                         }
-
                         updateClause.set(qEmployee.updatedAt, LocalDateTime.now())
                                 .where(qEmployee.id.eq(employee.getId()))
                                 .execute();
-
-                        count++;
                     }
                 }
             });
         });
     }
 
-    /** Reads data using explicit explicit SQL JOINs */
     public void testReadWithRelations(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
@@ -244,7 +235,7 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
             var s = new QEmployee("superior");
 
             stopwatch.benchmark(() -> {
-                queryFactory.select(Projections.constructor(EmployeeRelationView.class,
+                var result = queryFactory.select(Projections.constructor(EmployeeRelationView.class,
                                 e.id, e.name, c.name, s.name))
                         .from(e)
                         .join(c).on(e.cityId.eq(c.id))
@@ -254,7 +245,66 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         });
     }
 
-    /** Creates a random employee instance */
+    @Override
+    public void testReadRelatedEntities(Stopwatch stopwatch) {
+        service.executeInTransaction(dao -> {
+            var queryFactory = dao.getQueryFactory();
+            var e = QEmployee.employee;
+            var c = QCity.city;
+            var s = new QEmployee("superior");
+
+            stopwatch.benchmark(() -> {
+                var result = queryFactory.select(
+                                e.id, e.name, e.contractDay, e.isActive, e.email, e.phone, e.salary, e.department, e.createdAt, e.updatedAt, e.createdBy, e.updatedBy,
+                                c.id, c.name, c.countryCode, c.latitude, c.longitude, c.createdAt, c.updatedAt, c.createdBy, c.updatedBy,
+                                s.id, s.name
+                        )
+                        .from(e)
+                        .join(c).on(e.cityId.eq(c.id))
+                        .leftJoin(s).on(e.superiorId.eq(s.id))
+                        .fetch()
+                        .stream()
+                        .map(t -> {
+                            var city = new City();
+                            city.setId(t.get(c.id));
+                            city.setName(t.get(c.name));
+                            city.setCountryCode(t.get(c.countryCode));
+                            city.setLatitude(t.get(c.latitude));
+                            city.setLongitude(t.get(c.longitude));
+                            city.setCreatedAt(t.get(c.createdAt));
+                            city.setUpdatedAt(t.get(c.updatedAt));
+                            city.setCreatedBy(t.get(c.createdBy));
+                            city.setUpdatedBy(t.get(c.updatedBy));
+
+                            RichEmployee sup = null;
+                            if (t.get(s.id) != null) {
+                                sup = new RichEmployee();
+                                sup.setId(t.get(s.id));
+                                sup.setName(t.get(s.name));
+                            }
+
+                            var emp = new RichEmployee();
+                            emp.setId(t.get(e.id));
+                            emp.setName(t.get(e.name));
+                            emp.setCity(city);
+                            emp.setSuperior(sup);
+                            emp.setContractDay(t.get(e.contractDay));
+                            emp.setIsActive(t.get(e.isActive));
+                            emp.setEmail(t.get(e.email));
+                            emp.setPhone(t.get(e.phone));
+                            emp.setSalary(t.get(e.salary));
+                            emp.setDepartment(t.get(e.department));
+                            emp.setCreatedAt(t.get(e.createdAt));
+                            emp.setUpdatedAt(t.get(e.updatedAt));
+                            emp.setCreatedBy(t.get(e.createdBy));
+                            emp.setUpdatedBy(t.get(e.updatedBy));
+                            return emp;
+                        })
+                        .toList();
+            });
+        });
+    }
+
     public static Employee createRandomEmployee(City city) {
         var result = new Employee();
         result.setName("Name");

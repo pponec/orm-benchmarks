@@ -51,11 +51,42 @@ class ExposedBenchmark : OrmBenchmark {
         override val primaryKey = PrimaryKey(id)
     }
 
-    /** Employee data transfer object */
+    /** Flat Employee data class for fast Inserts/Updates */
     data class Employee(
         var id: Long? = null,
         var name: String,
         var cityId: Long,
+        var contractDay: LocalDate?,
+        var isActive: Boolean,
+        var email: String?,
+        var phone: String?,
+        var salary: BigDecimal?,
+        var department: String?,
+        var createdAt: LocalDateTime,
+        var updatedAt: LocalDateTime,
+        var createdBy: String,
+        var updatedBy: String
+    )
+
+    /** Domain representation of City */
+    data class City(
+        var id: Long,
+        var name: String,
+        var countryCode: String,
+        var latitude: BigDecimal,
+        var longitude: BigDecimal,
+        var createdAt: LocalDateTime,
+        var updatedAt: LocalDateTime,
+        var createdBy: String,
+        var updatedBy: String
+    )
+
+    /** Rich Domain Object representing the full object graph */
+    data class RichEmployee(
+        var id: Long,
+        var name: String,
+        var city: City,
+        var superior: RichEmployee?,
         var contractDay: LocalDate?,
         var isActive: Boolean,
         var email: String?,
@@ -173,6 +204,70 @@ class ExposedBenchmark : OrmBenchmark {
                     )
                 }
         }
+
+        /** Retrieves full entities mapped into an object graph from a single query */
+        fun findEntitiesWithRelations(): List<RichEmployee> {
+            val superiorAlias = Employees.alias("superior")
+
+            return Employees
+                .innerJoin(Cities)
+                .leftJoin(
+                    otherTable = superiorAlias,
+                    onColumn = { Employees.superiorId },
+                    otherColumn = { superiorAlias[Employees.id] }
+                )
+                .selectAll()
+                .map { row ->
+                    val city = City(
+                        id = row[Cities.id],
+                        name = row[Cities.name],
+                        countryCode = row[Cities.countryCode],
+                        latitude = row[Cities.latitude],
+                        longitude = row[Cities.longitude],
+                        createdAt = row[Cities.createdAt],
+                        updatedAt = row[Cities.updatedAt],
+                        createdBy = row[Cities.createdBy],
+                        updatedBy = row[Cities.updatedBy]
+                    )
+
+                    val superiorId = row.getOrNull(superiorAlias[Employees.id])
+                    val superior = if (superiorId != null) {
+                        RichEmployee(
+                            id = superiorId,
+                            name = row[superiorAlias[Employees.name]],
+                            city = city, // Zjednodušení (šéf a podřízený sdílí stejný instanční objekt města pro test)
+                            superior = null,
+                            contractDay = row.getOrNull(superiorAlias[Employees.contractDay]),
+                            isActive = row.getOrNull(superiorAlias[Employees.isActive]) ?: false,
+                            email = row.getOrNull(superiorAlias[Employees.email]),
+                            phone = row.getOrNull(superiorAlias[Employees.phone]),
+                            salary = row.getOrNull(superiorAlias[Employees.salary]),
+                            department = row.getOrNull(superiorAlias[Employees.department]),
+                            createdAt = row.getOrNull(superiorAlias[Employees.createdAt]) ?: LocalDateTime.now(),
+                            updatedAt = row.getOrNull(superiorAlias[Employees.updatedAt]) ?: LocalDateTime.now(),
+                            createdBy = row.getOrNull(superiorAlias[Employees.createdBy]) ?: "",
+                            updatedBy = row.getOrNull(superiorAlias[Employees.updatedBy]) ?: ""
+                        )
+                    } else null
+
+                    RichEmployee(
+                        id = row[Employees.id],
+                        name = row[Employees.name],
+                        city = city,
+                        superior = superior,
+                        contractDay = row[Employees.contractDay],
+                        isActive = row[Employees.isActive],
+                        email = row[Employees.email],
+                        phone = row[Employees.phone],
+                        salary = row[Employees.salary],
+                        department = row[Employees.department],
+                        createdAt = row[Employees.createdAt],
+                        updatedAt = row[Employees.updatedAt],
+                        createdBy = row[Employees.createdBy],
+                        updatedBy = row[Employees.updatedBy]
+                    )
+                }
+        }
     }
 
     /** Service layer managing transactions */
@@ -260,11 +355,18 @@ class ExposedBenchmark : OrmBenchmark {
         }
     }
 
-    /** Reads data including mapped relations */
     override fun testReadWithRelations(stopwatch: Stopwatch) {
         service.executeReadOnly { dao ->
             stopwatch.benchmark {
                 val result = dao.findWithRelations()
+            }
+        }
+    }
+
+    override fun testReadRelatedEntities(stopwatch: Stopwatch) {
+        service.executeReadOnly { dao ->
+            stopwatch.benchmark {
+                val result = dao.findEntitiesWithRelations()
             }
         }
     }

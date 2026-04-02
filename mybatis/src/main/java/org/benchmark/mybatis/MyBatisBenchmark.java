@@ -31,9 +31,7 @@ import java.util.function.Consumer;
 /** Main benchmark class for MyBatis */
 public class MyBatisBenchmark implements OrmBenchmark {
 
-    /** City entity mapping (Plain Java Object) */
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class City {
         private Long id;
         private String name;
@@ -46,9 +44,7 @@ public class MyBatisBenchmark implements OrmBenchmark {
         private String updatedBy;
     }
 
-    /** Employee entity mapping (Plain Java Object) */
-    @Getter
-    @Setter
+    @Getter @Setter
     public static class Employee {
         private Long id;
         private String name;
@@ -66,34 +62,100 @@ public class MyBatisBenchmark implements OrmBenchmark {
         private String updatedBy;
     }
 
-    /** MyBatis Mapper Interface */
+    /** Rich Domain Object for Reads */
+    @Getter @Setter
+    public static class RichEmployee {
+        private Long id;
+        private String name;
+        private City city;
+        private RichEmployee superior;
+        private LocalDate contractDay;
+        private Boolean isActive;
+        private String email;
+        private String phone;
+        private BigDecimal salary;
+        private String department;
+        private LocalDateTime createdAt;
+        private LocalDateTime updatedAt;
+        private String createdBy;
+        private String updatedBy;
+    }
+
     public interface EmployeeMapper {
-        @Select("SELECT * FROM city WHERE id = #{id}")
+        @Select("""
+            SELECT * FROM city WHERE id = #{id}
+            """)
         City getCity(Long id);
 
-        @Insert("INSERT INTO employee (name, superior_id, city_id, contract_day, is_active, email, phone, salary, department, created_at, updated_at, created_by, updated_by) " +
-                "VALUES (#{name}, #{superiorId}, #{cityId}, #{contractDay}, #{isActive}, #{email}, #{phone}, #{salary}, #{department}, #{createdAt}, #{updatedAt}, #{createdBy}, #{updatedBy})")
+        @Insert("""
+            INSERT INTO employee (
+                name, superior_id, city_id, contract_day, is_active, email, phone, salary, department, created_at, updated_at, created_by, updated_by
+            ) VALUES (
+                #{name}, #{superiorId}, #{cityId}, #{contractDay}, #{isActive}, #{email}, #{phone}, #{salary}, #{department}, #{createdAt}, #{updatedAt}, #{createdBy}, #{updatedBy}
+            )
+            """)
         @Options(useGeneratedKeys = true, keyProperty = "id")
         void insert(Employee employee);
 
-        @Select("SELECT * FROM employee")
+        @Select("""
+            SELECT * FROM employee
+            """)
         @Options(fetchSize = 50)
         Cursor<Employee> streamAllEmployees();
 
-        @Update("UPDATE employee SET salary = #{salary}, updated_at = #{updatedAt} WHERE id = #{id}")
+        @Update("""
+            UPDATE employee
+            SET salary = #{salary}, updated_at = #{updatedAt}
+            WHERE id = #{id}
+            """)
         void updateSpecific(Employee employee);
 
-        @Update("UPDATE employee SET is_active = #{isActive}, department = #{department}, updated_at = #{updatedAt} WHERE id = #{id}")
+        @Update("""
+            UPDATE employee
+            SET is_active = #{isActive}, department = #{department}, updated_at = #{updatedAt}
+            WHERE id = #{id}
+            """)
         void updateRandom(Employee employee);
 
-        @Select("SELECT e.id, e.name, c.name AS cityName, s.name AS superiorName " +
-                "FROM employee e " +
-                "JOIN city c ON e.city_id = c.id " +
-                "LEFT JOIN employee s ON e.superior_id = s.id")
+        @Select("""
+            SELECT e.id, e.name, c.name AS cityName, s.name AS superiorName
+            FROM employee e
+            JOIN city c ON e.city_id = c.id
+            LEFT JOIN employee s ON e.superior_id = s.id
+            """)
         List<EmployeeRelationView> getRelations();
+
+        @Select("""
+            SELECT e.id
+                 , e.name
+                 , e.contract_day AS contractDay
+                 , e.is_active AS isActive
+                 , e.email
+                 , e.phone
+                 , e.salary
+                 , e.department
+                 , e.created_at AS createdAt
+                 , e.updated_at AS updatedAt
+                 , e.created_by AS createdBy
+                 , e.updated_by AS updatedBy
+                 , c.id AS "city.id"
+                 , c.name AS "city.name"
+                 , c.country_code AS "city.countryCode"
+                 , c.latitude AS "city.latitude"
+                 , c.longitude AS "city.longitude"
+                 , c.created_at AS "city.createdAt"
+                 , c.updated_at AS "city.updatedAt"
+                 , c.created_by AS "city.createdBy"
+                 , c.updated_by AS "city.updatedBy"
+                 , s.id AS "superior.id"
+                 , s.name AS "superior.name"
+            FROM employee e
+            JOIN city c ON e.city_id = c.id
+            LEFT JOIN employee s ON e.superior_id = s.id
+            """)
+        List<RichEmployee> getEntitiesWithRelations();
     }
 
-    /** Service layer managing MyBatis sessions and transactions */
     public static class Service {
         private final SqlSessionFactory sessionFactory;
 
@@ -109,12 +171,10 @@ public class MyBatisBenchmark implements OrmBenchmark {
             this.sessionFactory = new SqlSessionFactoryBuilder().build(configuration);
         }
 
-        /** Executes the given action inside a standard transaction */
         public void executeInTransaction(Consumer<SqlSession> action) {
             execute(ExecutorType.SIMPLE, action);
         }
 
-        /** Executes the given action inside a BATCH transaction (equivalent to Hibernate StatelessSession for inserts) */
         public void executeInBatchTransaction(Consumer<SqlSession> action) {
             execute(ExecutorType.BATCH, action);
         }
@@ -141,28 +201,22 @@ public class MyBatisBenchmark implements OrmBenchmark {
         this.service = new Service();
     }
 
-    /** Executes a single row insert test */
     public void testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
             var city = mapper.getCity(1L);
-            if (city == null) throw new IllegalStateException("City not found");
-
             stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
-                    var employee = createRandomEmployee(city);
-                    mapper.insert(employee);
+                    mapper.insert(createRandomEmployee(city));
                 }
             });
         });
     }
 
-    /** Executes a batch insert test using ExecutorType.BATCH for maximum performance */
     public void testBatchInsert(Stopwatch stopwatch) {
         service.executeInBatchTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
             var city = mapper.getCity(1L);
-
             stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
                     mapper.insert(createRandomEmployee(city));
@@ -175,52 +229,16 @@ public class MyBatisBenchmark implements OrmBenchmark {
         });
     }
 
-    /** Executes updates on selected columns using Cursor for streaming */
     public void testSpecificUpdate(Stopwatch stopwatch) {
         service.executeInBatchTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
-
             stopwatch.benchmark(() -> {
                 var count = 0;
                 try (var cursor = mapper.streamAllEmployees()) {
                     for (var employee : cursor) {
                         employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
                         employee.setUpdatedAt(LocalDateTime.now());
-
                         mapper.updateSpecific(employee);
-
-                        if (++count % 50 == 0) {
-                            session.flushStatements();
-                            session.clearCache(); // Volitelné uvolnění paměti (MyBatis cachuje čistě jen query výsledky)
-                        }
-                    }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                session.flushStatements();
-            });
-        });
-    }
-
-    /** Executes updates on randomly modified columns */
-    public void testRandomUpdate(Stopwatch stopwatch) {
-        var random = new Random();
-        service.executeInBatchTransaction(session -> {
-            var mapper = session.getMapper(EmployeeMapper.class);
-
-            stopwatch.benchmark(() -> {
-                var count = 0;
-                try (var cursor = mapper.streamAllEmployees()) {
-                    for (var employee : cursor) {
-                        if (random.nextBoolean()) {
-                            employee.setIsActive(!employee.getIsActive());
-                        } else {
-                            employee.setDepartment("Dept-" + random.nextInt(100));
-                        }
-                        employee.setUpdatedAt(LocalDateTime.now());
-
-                        mapper.updateRandom(employee);
-
                         if (++count % 50 == 0) {
                             session.flushStatements();
                             session.clearCache();
@@ -234,15 +252,53 @@ public class MyBatisBenchmark implements OrmBenchmark {
         });
     }
 
-    /** Reads data including mapped relations */
-    public void testReadWithRelations(Stopwatch stopwatch) {
-        service.executeInTransaction(session -> {
+    public void testRandomUpdate(Stopwatch stopwatch) {
+        var random = new Random();
+        service.executeInBatchTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
-            stopwatch.benchmark(mapper::getRelations);
+            stopwatch.benchmark(() -> {
+                var count = 0;
+                try (var cursor = mapper.streamAllEmployees()) {
+                    for (var employee : cursor) {
+                        if (random.nextBoolean()) {
+                            employee.setIsActive(!employee.getIsActive());
+                        } else {
+                            employee.setDepartment("Dept-" + random.nextInt(100));
+                        }
+                        employee.setUpdatedAt(LocalDateTime.now());
+                        mapper.updateRandom(employee);
+                        if (++count % 50 == 0) {
+                            session.flushStatements();
+                            session.clearCache();
+                        }
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                session.flushStatements();
+            });
         });
     }
 
-    /** Creates a random employee instance */
+    public void testReadWithRelations(Stopwatch stopwatch) {
+        service.executeInTransaction(session -> {
+            var mapper = session.getMapper(EmployeeMapper.class);
+            stopwatch.benchmark(() -> {
+                var result = mapper.getRelations();
+            });
+        });
+    }
+
+    @Override
+    public void testReadRelatedEntities(Stopwatch stopwatch) {
+        service.executeInTransaction(session -> {
+            var mapper = session.getMapper(EmployeeMapper.class);
+            stopwatch.benchmark(() -> {
+                var result = mapper.getEntitiesWithRelations();
+            });
+        });
+    }
+
     public static Employee createRandomEmployee(City city) {
         var result = new Employee();
         result.setName("Name");
