@@ -15,7 +15,6 @@ This project compares the performance of several Java/Kotlin ORM and database ma
 * **Exposed:** `0.58.0`
 * **MyBatis:** `3.5.15`
 * **QueryDSL:** `5.1.0`
-* **Spring Data JDBC:** `4.0.5`
 * **Ujorm3:** `3.0.0-RC4`
 
 ## Test Scenarios & Metrics
@@ -35,14 +34,14 @@ All tests exclude the initial warm-up phase to ensure accurate JIT compilation a
 | Library | Batch<br/>Insert [s] | Specific<br/>Update [s] | Random<br/>Update [s] | Read<br/>Rels [s] | Read Entity <br/>[s] | Mem Insert<br/>[B/op] | Mem Update<br/>[B/op] | Mem Rand<br/>Upd [B/op] | Mem Read w/<br/>Rel. [B/op] | Mem Read<br/>[B/op] | JAR Size<br/>[MB] | Code Q.<br/>[0-100] |
 |:--------|---------------------:|---------------------:|---------------------:|-------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|
 | Ujorm3 | **1.385** | **4.048** | **4.286** |  **0.251** | **0.792** | **11_876** | **36_230** | **36_715** | **1_081** | **2_281** | **2.80** | 88 |
-| Jdbi | 1.668 | 4.397 | 4.408 | 0.354 | * 1.090 | 13_667 | 40_132 | 40_238 | 1_638 | 3_318 | 3.89 | 70 |
+| Jdbi | 1.668 | 4.397 | 4.408 | 0.354 | 1.090 | 13_667 | 40_132 | 40_238 | 1_638 | 3_318 | 3.89 | 70 |
 | MyBatis | 1.725 | 5.342 | 5.355 | 0.613 | 2.480 | 12_813 | 39_718 | 39_681 | 3_478 | 8_742 | 4.27 | 60 |
 | Hibernate | 2.764 | 8.303 | 8.277 | 0.272 | 1.622 | 15_858 | 53_257 | 53_191 | 1_158 | 4_032 | 25.68 | 85 |
-| Exposed | 3.456 | 7.042 | 5.956 | 1.250 | * 3.415 | 23_293 | 49_088 | 46_899 | 3_811 | 8_212 | 9.81 | 75 |
-| QueryDsl | 5.038 | 8.427 | 9.457 | 0.295 | * 1.401 | 45_201 | 73_136 | 74_814 | 1_159 | 2_335 | 3.46 | 85 |
+| Exposed | 3.456 | 7.042 | 5.956 | 1.250 | 3.415 | 23_293 | 49_088 | 46_899 | 3_811 | 8_212 | 9.81 | 75 |
+| QueryDsl | 5.038 | 8.427 | 9.457 | 0.295 | 1.401 | 45_201 | 73_136 | 74_814 | 1_159 | 2_335 | 3.46 | 85 |
 | Jooq | 5.025 | 9.932 | 10.199 | 0.496 | 1.859 | 28_436 | 53_987 | 54_065 | 1_510 | 5_062 | 8.49 | **90** |
 
-An asterisk (*) next to an entity's read values indicates frameworks where flat results must be mapped to entities manually, as the library does not support this.
+Spring Data JDBC library is excluded because its strict focus on the Aggregate Root pattern prevents automated mapping of complex, deep-nested entity graphs and lacks a native type-safe Query DSL, requiring excessive manual boilerplate for the benchmark's complex JOIN scenarios.
 
 ---
 
