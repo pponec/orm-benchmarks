@@ -15,7 +15,6 @@ This project compares the performance of several Java/Kotlin ORM and database ma
 * **Exposed:** `0.58.0`
 * **MyBatis:** `3.5.15`
 * **QueryDSL:** `5.1.0`
-* **Spring Data JDBC:** `4.0.5`
 * **Ujorm3:** `3.0.0-RC4`
 
 ## Test Scenarios & Metrics
@@ -43,6 +42,8 @@ All tests exclude the initial warm-up phase to ensure accurate JIT compilation a
 | Jooq | 5.025 | 9.932 | 10.199 | 0.496 | 1.859 | 28_436 | 53_987 | 54_065 | 1_510 | 5_062 | 8.49 | **90** |
 
 An asterisk (*) next to an entity's read values indicates frameworks where flat results must be mapped to entities manually, as the library does not support this.
+
+Spring Data JDBC library is excluded because its strict focus on the Aggregate Root pattern prevents automated mapping of complex, deep-nested entity graphs and lacks a native type-safe Query DSL, requiring excessive manual boilerplate for the benchmark's complex JOIN scenarios.
 
 ---
 
