@@ -31,6 +31,10 @@ All tests exclude the initial warm-up phase to ensure accurate JIT compilation a
 
 ## Benchmark Results
 
+<div align="center">
+<img src="docs/benchmark-graph.svg" alt="Benchmark graph" width="500" />
+</div>
+
 | Library | Batch<br/>Insert [s] | Specific<br/>Update [s] | Random<br/>Update [s] | Read<br/>Rels [s] | Read Entity <br/>[s] | Mem Insert<br/>[B/op] | Mem Update<br/>[B/op] | Mem Rand<br/>Upd [B/op] | Mem Read w/<br/>Rel. [B/op] | Mem Read<br/>[B/op] | JAR Size<br/>[MB] | Quality<br/>[0-100] |
 |:--------|---------------------:|---------------------:|---------------------:|-------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
 | Ujorm3 | **1.385** | **4.048** | **4.286** |  **0.251** | **0.792** | **11_876** | **36_230** | **36_715** | **1_081** | **2_281** | **2.80** | 85 |

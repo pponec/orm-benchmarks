@@ -12,7 +12,7 @@ import org.benchmark.common.Stopwatch;
 import org.benchmark.ujorm.meta.*;
 import org.ujorm.core.AbstractSnapshotable;
 import org.ujorm.orm.core.EntityManager;
-import org.ujorm.orm.dsl.DslQuery;
+import org.ujorm.orm.dsl.SelectQuery;
 import org.ujorm.orm.jdbc.ResultSetMapper;
 import org.ujorm.orm.SqlQuery;
 import org.benchmark.common.OrmBenchmark;
@@ -149,7 +149,7 @@ public class UjormBenchmark implements OrmBenchmark {
 
         /** Retrieves full entities mapped into an object graph from a single query */
         public List<Employee> findEntitiesWithRelations(Connection conn) {
-            return DslQuery.run(conn, empEm, query -> query
+            return SelectQuery.run(conn, empEm, query -> query
                     .sql("SELECT")
                     .columnsOfDomain(false)
                     // --- CITY RELATION ---
@@ -177,7 +177,6 @@ public class UjormBenchmark implements OrmBenchmark {
                     .column(QEmployee.superior, QEmployee.updatedBy)
                     // --- EXECUTION ---
                     .fetchSize(empEm.defaultBatchSize())
-                    .streamMap(empEm.mapper())
                     .toList());
         }
     }
