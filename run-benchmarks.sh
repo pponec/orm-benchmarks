@@ -32,6 +32,10 @@ FRAMEWORKS="
   QUERYDSL
   JOOQ
 "
+FRAMEWORKS="
+  UJORM
+  JDBI
+"
 
 for FRAMEWORK in ${FRAMEWORKS}; do
     echo "========================================================="
