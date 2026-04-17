@@ -106,7 +106,7 @@ public class UjormBenchmark implements OrmBenchmark {
             return empEm.crud(conn)
                     .selectWhere("", builder -> builder
                             .fetchSize(empEm.defaultBatchSize())
-                            .streamMap(empEm.mapper()).toList());
+                            .toStream(empEm.mapper()).toList());
         }
 
         /** Updates specific columns using batch */
@@ -143,7 +143,7 @@ public class UjormBenchmark implements OrmBenchmark {
                     .label("c.name", QEmployeeRelationView.cityName)
                     .label("s.name", QEmployeeRelationView.superiorName)
                     .fetchSize(empEm.defaultBatchSize())
-                    .streamMap(empView.mapper())
+                    .toStream(empView.mapper())
                     .toList());
         }
 
@@ -151,7 +151,7 @@ public class UjormBenchmark implements OrmBenchmark {
         public List<Employee> findEntitiesWithRelations(Connection conn) {
             return SelectQuery.run(conn, empEm, query -> query
                     .sql("SELECT")
-                    .columnsOfDomain(false)
+                    .columns(false)
                     // --- CITY RELATION ---
                     .column(QEmployee.city, QCity.id)
                     .column(QEmployee.city, QCity.name)
