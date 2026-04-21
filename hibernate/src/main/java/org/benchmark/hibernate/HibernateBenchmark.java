@@ -95,19 +95,6 @@ public class HibernateBenchmark implements OrmBenchmark {
             session.persist(entity);
         }
 
-        /** Flushes pending changes and clears the session cache */
-        public void flushAndClear() {
-            session.flush();
-            session.clear();
-        }
-
-        /** Retrieves all employees as a stream for efficient processing */
-        public Stream<Employee> streamAllEmployees() {
-            return session.createQuery("from HibEmployee", Employee.class)
-                    .setCacheable(false)
-                    .stream();
-        }
-
         /** Retrieves a City from the database */
         public City getCity(Long id) {
             var result = session.find(City.class, id);
@@ -215,6 +202,7 @@ public class HibernateBenchmark implements OrmBenchmark {
     }
 
     /** Executes a batch insert test using StatelessSession for maximum performance */
+    @Override
     public void testBatchInsert(Stopwatch stopwatch) {
         service.executeInStatelessTransaction(session -> {
             var city = session.get(City.class, 1L);
@@ -235,43 +223,55 @@ public class HibernateBenchmark implements OrmBenchmark {
     }
 
     /** Executes updates on selected columns */
+    @Override
     public void testSpecificUpdate(Stopwatch stopwatch) {
-        service.executeInTransaction(dao -> {
-            stopwatch.benchmark(() -> {
-                var count = 0;
-                try (var stream = dao.streamAllEmployees()) {
-                    for (var employee : (Iterable<Employee>) stream::iterator) {
-                        employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
-                        employee.setUpdatedAt(LocalDateTime.now());
+        service.executeInStatelessTransaction(session -> {
+            var employees = session.createQuery("from HibEmployee", Employee.class).list();
 
-                        if (++count % 50 == 0) {
-                            dao.flushAndClear();
-                        }
+            stopwatch.benchmark(() -> {
+                var batch = new ArrayList<Employee>(50);
+                for (var employee : employees) {
+                    employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
+                    employee.setUpdatedAt(LocalDateTime.now());
+                    batch.add(employee);
+
+                    if (batch.size() == 50) {
+                        session.updateMultiple(batch);
+                        batch.clear();
                     }
+                }
+                if (!batch.isEmpty()) {
+                    session.updateMultiple(batch);
                 }
             });
         });
     }
 
     /** Executes updates on randomly modified columns */
+    @Override
     public void testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
-        service.executeInTransaction(dao -> {
-            stopwatch.benchmark(() -> {
-                var count = 0;
-                try (var stream = dao.streamAllEmployees()) {
-                    for (var employee : (Iterable<Employee>) stream::iterator) {
-                        if (random.nextBoolean()) {
-                            employee.setIsActive(!employee.getIsActive());
-                        } else {
-                            employee.setDepartment("Dept-" + random.nextInt(100));
-                        }
-                        employee.setUpdatedAt(LocalDateTime.now());
+        service.executeInStatelessTransaction(session -> {
+            var employees = session.createQuery("from HibEmployee", Employee.class).list();
 
-                        if (++count % 50 == 0) {
-                            dao.flushAndClear();
-                        }
+            stopwatch.benchmark(() -> {
+                var batch = new ArrayList<Employee>(50);
+                for (var employee : employees) {
+                    if (random.nextBoolean()) {
+                        employee.setIsActive(!employee.getIsActive());
+                    } else {
+                        employee.setDepartment("Dept-" + random.nextInt(100));
                     }
+                    employee.setUpdatedAt(LocalDateTime.now());
+                    batch.add(employee);
+
+                    if (batch.size() == 50) {
+                        session.updateMultiple(batch);
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    session.updateMultiple(batch);
                 }
             });
         });

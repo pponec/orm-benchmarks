@@ -93,6 +93,7 @@ public class JooqBenchmark implements OrmBenchmark {
         this.service = new Service();
     }
 
+    @Override
     public void testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dsl -> {
             stopwatch.benchmark(() -> {
@@ -125,8 +126,8 @@ public class JooqBenchmark implements OrmBenchmark {
 
     public void testSpecificUpdate(Stopwatch stopwatch) {
         service.executeInTransaction(dsl -> {
+            var records = dsl.selectFrom(EMPLOYEE).fetch();
             stopwatch.benchmark(() -> {
-                var records = dsl.selectFrom(EMPLOYEE).fetch();
                 for (var record : records) {
                     record.setSalary(record.getSalary().add(BigDecimal.valueOf(1000)));
                     record.setUpdatedAt(LocalDateTime.now());
@@ -139,8 +140,8 @@ public class JooqBenchmark implements OrmBenchmark {
     public void testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
         service.executeInTransaction(dsl -> {
+            var records = dsl.selectFrom(EMPLOYEE).fetch();
             stopwatch.benchmark(() -> {
-                var records = dsl.selectFrom(EMPLOYEE).fetch();
                 for (var record : records) {
                     if (random.nextBoolean()) {
                         record.setIsActive(!record.getIsActive());

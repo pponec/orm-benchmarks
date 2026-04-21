@@ -233,6 +233,7 @@ public class UjormBenchmark implements OrmBenchmark {
     }
 
     /** Executes a batch insert test */
+    @Override
     public void testBatchInsert(Stopwatch stopwatch) {
         service.executeInTransaction((dao, conn) -> {
             var city = dao.getCity(1L, conn);

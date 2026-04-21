@@ -256,6 +256,7 @@ public class JdbiBenchmark implements OrmBenchmark {
     }
 
     /** Executes a single row insert test */
+    @Override
     public void testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             stopwatch.benchmark(() -> {

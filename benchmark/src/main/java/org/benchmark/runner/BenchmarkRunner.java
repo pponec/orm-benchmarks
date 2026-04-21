@@ -3,13 +3,13 @@ package org.benchmark.runner;
 import lombok.RequiredArgsConstructor;
 import org.benchmark.common.OrmBenchmark;
 import org.benchmark.common.Stopwatch;
+import org.benchmark.ebean.EbeanBenchmark;
 import org.benchmark.exposed.ExposedBenchmark;
 import org.benchmark.hibernate.HibernateBenchmark;
 import org.benchmark.jdbi.JdbiBenchmark;
 import org.benchmark.jooq.JooqBenchmark;
 import org.benchmark.mybatis.MyBatisBenchmark;
 import org.benchmark.querydsl.QuerydslSqlBenchmark;
-import org.benchmark.springdatajdbc.SpringDataJdbcBenchmark;
 import org.benchmark.ujorm.UjormBenchmark;
 
 import java.io.FileWriter;
@@ -39,6 +39,7 @@ public class BenchmarkRunner {
         MYBATIS("MyBatis", "mybatis", MyBatisBenchmark::new),
         QUERYDSL("QueryDsl", "querydsl", QuerydslSqlBenchmark::new),
         JOOQ("Jooq", "jooq", JooqBenchmark::new),
+        EBEAN("EBean", "ebean", EbeanBenchmark::new),
         UJORM("Ujorm3", "ujorm3", UjormBenchmark::new);
 
         /** CSV label */
@@ -58,6 +59,7 @@ public class BenchmarkRunner {
 
     /** Enum representing the benchmark operation */
     public enum Operation {
+        SINGLE_INSERT("Single Insert", OrmBenchmark::testSingleInsert),
         BATCH_INSERT("Batch Insert", OrmBenchmark::testBatchInsert),
         SPECIFIC_UPDATE("Specific Update", OrmBenchmark::testSpecificUpdate),
         RANDOM_UPDATE("Random Update", OrmBenchmark::testRandomUpdate),

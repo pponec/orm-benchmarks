@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
-import org.apache.ibatis.cursor.Cursor;
 import org.apache.ibatis.datasource.unpooled.UnpooledDataSource;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
@@ -97,11 +96,11 @@ public class MyBatisBenchmark implements OrmBenchmark {
         @Options(useGeneratedKeys = true, keyProperty = "id")
         void insert(Employee employee);
 
+        // Opraveno: Načtení do Listu namísto použití Cursoru pro férové načtení dat do paměti před updaty
         @Select("""
             SELECT * FROM employee
             """)
-        @Options(fetchSize = 50)
-        Cursor<Employee> streamAllEmployees();
+        List<Employee> getAllEmployees();
 
         @Update("""
             UPDATE employee
@@ -201,6 +200,7 @@ public class MyBatisBenchmark implements OrmBenchmark {
         this.service = new Service();
     }
 
+    @Override
     public void testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
@@ -213,6 +213,7 @@ public class MyBatisBenchmark implements OrmBenchmark {
         });
     }
 
+    @Override
     public void testBatchInsert(Stopwatch stopwatch) {
         service.executeInBatchTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
@@ -229,57 +230,57 @@ public class MyBatisBenchmark implements OrmBenchmark {
         });
     }
 
+    @Override
     public void testSpecificUpdate(Stopwatch stopwatch) {
         service.executeInBatchTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
+            // Férové načtení dat do paměti PŘED stiskem stopek
+            var employees = mapper.getAllEmployees();
+
             stopwatch.benchmark(() -> {
                 var count = 0;
-                try (var cursor = mapper.streamAllEmployees()) {
-                    for (var employee : cursor) {
-                        employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
-                        employee.setUpdatedAt(LocalDateTime.now());
-                        mapper.updateSpecific(employee);
-                        if (++count % 50 == 0) {
-                            session.flushStatements();
-                            session.clearCache();
-                        }
+                for (var employee : employees) {
+                    employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
+                    employee.setUpdatedAt(LocalDateTime.now());
+                    mapper.updateSpecific(employee);
+                    if (++count % 50 == 0) {
+                        session.flushStatements();
+                        session.clearCache();
                     }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
                 }
                 session.flushStatements();
             });
         });
     }
 
+    @Override
     public void testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
         service.executeInBatchTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
+            var employees = mapper.getAllEmployees();
+
             stopwatch.benchmark(() -> {
                 var count = 0;
-                try (var cursor = mapper.streamAllEmployees()) {
-                    for (var employee : cursor) {
-                        if (random.nextBoolean()) {
-                            employee.setIsActive(!employee.getIsActive());
-                        } else {
-                            employee.setDepartment("Dept-" + random.nextInt(100));
-                        }
-                        employee.setUpdatedAt(LocalDateTime.now());
-                        mapper.updateRandom(employee);
-                        if (++count % 50 == 0) {
-                            session.flushStatements();
-                            session.clearCache();
-                        }
+                for (var employee : employees) {
+                    if (random.nextBoolean()) {
+                        employee.setIsActive(!employee.getIsActive());
+                    } else {
+                        employee.setDepartment("Dept-" + random.nextInt(100));
                     }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    employee.setUpdatedAt(LocalDateTime.now());
+                    mapper.updateRandom(employee);
+                    if (++count % 50 == 0) {
+                        session.flushStatements();
+                        session.clearCache();
+                    }
                 }
                 session.flushStatements();
             });
         });
     }
 
+    @Override
     public void testReadWithRelations(Stopwatch stopwatch) {
         service.executeInTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);

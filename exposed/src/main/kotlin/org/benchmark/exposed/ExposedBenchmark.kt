@@ -295,7 +295,7 @@ class ExposedBenchmark : OrmBenchmark {
     private val service = Service()
 
     /** Executes a single row insert test */
-    fun testSingleInsert(stopwatch: Stopwatch) {
+    override fun testSingleInsert(stopwatch: Stopwatch) {
         service.executeInTransaction { dao ->
             stopwatch.benchmark {
                 for (i in 1..stopwatch.iterations) {

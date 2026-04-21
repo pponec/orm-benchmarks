@@ -138,6 +138,7 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         this.service = new Service();
     }
 
+    @Override
     public void testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
@@ -177,23 +178,22 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
             var qEmployee = QEmployee.employee;
+            var employees = dao.streamAllEmployees().toList();
 
             stopwatch.benchmark(() -> {
                 var updateClause = queryFactory.update(qEmployee);
                 var count = 0;
 
-                try (var stream = dao.streamAllEmployees()) {
-                    for (var employee : (Iterable<Employee>) stream::iterator) {
-                        var newSalary = employee.getSalary().add(BigDecimal.valueOf(1000));
-                        updateClause.set(qEmployee.salary, newSalary)
-                                .set(qEmployee.updatedAt, LocalDateTime.now())
-                                .where(qEmployee.id.eq(employee.getId()))
-                                .addBatch();
+                for (var employee : employees) {
+                    var newSalary = employee.getSalary().add(BigDecimal.valueOf(1000));
+                    updateClause.set(qEmployee.salary, newSalary)
+                            .set(qEmployee.updatedAt, LocalDateTime.now())
+                            .where(qEmployee.id.eq(employee.getId()))
+                            .addBatch();
 
-                        if (++count % 50 == 0) {
-                            updateClause.execute();
-                            updateClause = queryFactory.update(qEmployee);
-                        }
+                    if (++count % 50 == 0) {
+                        updateClause.execute();
+                        updateClause = queryFactory.update(qEmployee);
                     }
                 }
                 if (count % 50 != 0) {
@@ -208,20 +208,29 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
             var qEmployee = QEmployee.employee;
+            var employees = dao.streamAllEmployees().toList();
 
             stopwatch.benchmark(() -> {
-                try (var stream = dao.streamAllEmployees()) {
-                    for (var employee : (Iterable<Employee>) stream::iterator) {
-                        var updateClause = queryFactory.update(qEmployee);
-                        if (random.nextBoolean()) {
-                            updateClause.set(qEmployee.isActive, !employee.getIsActive());
-                        } else {
-                            updateClause.set(qEmployee.department, "Dept-" + random.nextInt(100));
-                        }
-                        updateClause.set(qEmployee.updatedAt, LocalDateTime.now())
-                                .where(qEmployee.id.eq(employee.getId()))
-                                .execute();
+                var updateClause = queryFactory.update(qEmployee);
+                var count = 0;
+
+                for (var employee : employees) {
+                    if (random.nextBoolean()) {
+                        updateClause.set(qEmployee.isActive, !employee.getIsActive());
+                    } else {
+                        updateClause.set(qEmployee.department, "Dept-" + random.nextInt(100));
                     }
+                    updateClause.set(qEmployee.updatedAt, LocalDateTime.now())
+                            .where(qEmployee.id.eq(employee.getId()))
+                            .addBatch();
+
+                    if (++count % 50 == 0) {
+                        updateClause.execute();
+                        updateClause = queryFactory.update(qEmployee);
+                    }
+                }
+                if (count % 50 != 0) {
+                    updateClause.execute();
                 }
             });
         });
