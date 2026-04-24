@@ -1,17 +1,19 @@
 package org.benchmark.common;
 
+import java.util.List;
+
 /** Common interface for all ORM benchmarks */
 public interface OrmBenchmark {
 
-    void testSingleInsert(Stopwatch stopwatch);
+    int testSingleInsert(Stopwatch stopwatch);
 
-    void testBatchInsert(Stopwatch stopwatch);
+    int testBatchInsert(Stopwatch stopwatch);
 
-    void testSpecificUpdate(Stopwatch stopwatch);
+    int testSpecificUpdate(Stopwatch stopwatch);
 
-    void testRandomUpdate(Stopwatch stopwatch);
+    int testRandomUpdate(Stopwatch stopwatch);
 
-    void testReadWithRelations(Stopwatch stopwatch);
+    List<EmployeeRelationView> testReadWithRelations(Stopwatch stopwatch);
 
-    void testReadRelatedEntities(Stopwatch stopwatch);
+    List<?> testReadRelatedEntities(Stopwatch stopwatch);
 }

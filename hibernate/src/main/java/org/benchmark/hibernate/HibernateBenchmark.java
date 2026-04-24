@@ -26,11 +26,15 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
-/** Main benchmark class for Hibernate */
+/**
+ * Main benchmark class for Hibernate.
+ * Uses entity/session APIs (including StatelessSession for bulk work), which is idiomatic Hibernate usage.
+ */
 public class HibernateBenchmark implements OrmBenchmark {
 
     /** City entity mapping */
@@ -189,7 +193,7 @@ public class HibernateBenchmark implements OrmBenchmark {
     }
 
     /** Executes a single row insert test */
-    public void testSingleInsert(Stopwatch stopwatch) {
+    public int testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
             stopwatch.benchmark(() -> {
@@ -199,11 +203,12 @@ public class HibernateBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes a batch insert test using StatelessSession for maximum performance */
     @Override
-    public void testBatchInsert(Stopwatch stopwatch) {
+    public int testBatchInsert(Stopwatch stopwatch) {
         service.executeInStatelessTransaction(session -> {
             var city = session.get(City.class, 1L);
             stopwatch.benchmark(() -> {
@@ -220,13 +225,16 @@ public class HibernateBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes updates on selected columns */
     @Override
-    public void testSpecificUpdate(Stopwatch stopwatch) {
+    public int testSpecificUpdate(Stopwatch stopwatch) {
+        var updatedCount = new AtomicReference<>(0);
         service.executeInStatelessTransaction(session -> {
             var employees = session.createQuery("from HibEmployee", Employee.class).list();
+            updatedCount.set(employees.size());
 
             stopwatch.benchmark(() -> {
                 var batch = new ArrayList<Employee>(50);
@@ -245,14 +253,17 @@ public class HibernateBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Executes updates on randomly modified columns */
     @Override
-    public void testRandomUpdate(Stopwatch stopwatch) {
+    public int testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
+        var updatedCount = new AtomicReference<>(0);
         service.executeInStatelessTransaction(session -> {
             var employees = session.createQuery("from HibEmployee", Employee.class).list();
+            updatedCount.set(employees.size());
 
             stopwatch.benchmark(() -> {
                 var batch = new ArrayList<Employee>(50);
@@ -275,10 +286,12 @@ public class HibernateBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Reads data into a DTO projection */
-    public void testReadWithRelations(Stopwatch stopwatch) {
+    public List<EmployeeRelationView> testReadWithRelations(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<EmployeeRelationView>>(List.of());
         service.executeReadOnly(session -> {
             var query = session.createQuery("""
                     select new org.benchmark.common.EmployeeRelationView(
@@ -292,13 +305,15 @@ public class HibernateBenchmark implements OrmBenchmark {
                     left join e.superior s
                     """, EmployeeRelationView.class);
 
-            stopwatch.benchmark(query::list);
+            stopwatch.benchmark(() -> result.set(query.list()));
         });
+        return result.get();
     }
 
     /** Reads full entities including mapped relations using fetch joins */
     @Override
-    public void testReadRelatedEntities(Stopwatch stopwatch) {
+    public List<Employee> testReadRelatedEntities(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<Employee>>(List.of());
         service.executeReadOnly(session -> {
             var query = session.createQuery("""
                     select e
@@ -307,8 +322,9 @@ public class HibernateBenchmark implements OrmBenchmark {
                     left join fetch e.superior s
                     """, Employee.class);
 
-            stopwatch.benchmark(query::list);
+            stopwatch.benchmark(() -> result.set(query.list()));
         });
+        return result.get();
     }
 
     /** Creates a random employee instance */

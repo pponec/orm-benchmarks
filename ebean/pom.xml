@@ -33,17 +33,6 @@
             <version>${ebean.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.ebean</groupId>
-            <artifactId>querybean-generator</artifactId>
-            <version>${ebean.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.ebean</groupId>
-            <artifactId>ebean-querybean</artifactId>
-            <version>${ebean.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.30</version>
@@ -53,6 +42,12 @@
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>2.2.224</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.11.4</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -68,11 +63,6 @@
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>1.18.42</version>
-                        </path>
-                        <path>
-                            <groupId>io.ebean</groupId>
-                            <artifactId>querybean-generator</artifactId>
-                            <version>${ebean.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
@@ -101,6 +91,11 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
             </plugin>
 
             <plugin>

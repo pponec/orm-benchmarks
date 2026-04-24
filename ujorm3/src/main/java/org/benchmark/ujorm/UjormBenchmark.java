@@ -25,9 +25,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-/** Main benchmark class for Ujorm3 */
+/**
+ * Main benchmark class for Ujorm3.
+ * Uses Ujorm entity managers and query DSL as the framework-native style.
+ */
 public class UjormBenchmark implements OrmBenchmark {
 
     /** City entity mapping */
@@ -220,7 +224,7 @@ public class UjormBenchmark implements OrmBenchmark {
     }
 
     /** Executes a single row insert test */
-    public void testSingleInsert(Stopwatch stopwatch) {
+    public int testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction((dao, conn) -> {
             var city = dao.getCity(1L, conn);
             stopwatch.benchmark(() -> {
@@ -230,11 +234,12 @@ public class UjormBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes a batch insert test */
     @Override
-    public void testBatchInsert(Stopwatch stopwatch) {
+    public int testBatchInsert(Stopwatch stopwatch) {
         service.executeInTransaction((dao, conn) -> {
             var city = dao.getCity(1L, conn);
             stopwatch.benchmark(() -> {
@@ -251,12 +256,15 @@ public class UjormBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes updates on selected columns */
-    public void testSpecificUpdate(Stopwatch stopwatch) {
+    public int testSpecificUpdate(Stopwatch stopwatch) {
+        var updatedCount = new AtomicReference<>(0);
         service.executeInTransaction((dao, conn) -> {
             var employees = dao.findAllEmployees(conn);
+            updatedCount.set(employees.size());
             stopwatch.benchmark(() -> {
                 var batch = new ArrayList<Employee>(50);
                 for (var employee : employees) {
@@ -273,13 +281,16 @@ public class UjormBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Executes updates on randomly modified columns */
-    public void testRandomUpdate(Stopwatch stopwatch) {
+    public int testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
+        var updatedCount = new AtomicReference<>(0);
         service.executeInTransaction((dao, conn) -> {
             var employees = dao.findAllEmployees(conn);
+            updatedCount.set(employees.size());
             stopwatch.benchmark(() -> {
                 var batch = new ArrayList<Employee>(50);
                 for (var employee : employees) {
@@ -302,25 +313,30 @@ public class UjormBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Reads data including mapped relations */
-    public void testReadWithRelations(Stopwatch stopwatch) {
+    public List<EmployeeRelationView> testReadWithRelations(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<EmployeeRelationView>>(List.of());
         service.executeReadOnly((dao, conn) -> {
             stopwatch.benchmark(() -> {
-                var result = dao.findWithRelations(conn);
+                result.set(dao.findWithRelations(conn));
             });
         });
+        return result.get();
     }
 
     /** Reads full entities including mapped relations */
     @Override
-    public void testReadRelatedEntities(Stopwatch stopwatch) {
+    public List<Employee> testReadRelatedEntities(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<Employee>>(List.of());
         service.executeReadOnly((dao, conn) -> {
             stopwatch.benchmark(() -> {
-                var result = dao.findEntitiesWithRelations(conn);
+                result.set(dao.findEntitiesWithRelations(conn));
             });
         });
+        return result.get();
     }
 
     /** Creates a random employee instance */

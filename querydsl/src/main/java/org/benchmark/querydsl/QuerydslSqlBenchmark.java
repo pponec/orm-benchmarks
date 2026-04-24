@@ -19,10 +19,15 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.List;
 import java.util.stream.Stream;
 
-/** Main benchmark class for QueryDSL SQL */
+/**
+ * Main benchmark class for QueryDSL SQL.
+ * Uses QueryDSL's fluent, type-safe SQL API with generated Q-types.
+ */
 public class QuerydslSqlBenchmark implements OrmBenchmark {
 
     @Getter @Setter
@@ -139,18 +144,20 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
     }
 
     @Override
-    public void testSingleInsert(Stopwatch stopwatch) {
+    public int testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
             stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
-                    dao.insert(createRandomEmployee(city));
+                    var employee = createRandomEmployee(city);
+                    dao.insert(employee);
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
-    public void testBatchInsert(Stopwatch stopwatch) {
+    public int testBatchInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
             var queryFactory = dao.getQueryFactory();
@@ -161,7 +168,8 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                 var count = 0;
 
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
-                    insertClause.populate(createRandomEmployee(city)).addBatch();
+                    var employee = createRandomEmployee(city);
+                    insertClause.populate(employee).addBatch();
                     if (++count % 50 == 0) {
                         insertClause.execute();
                         insertClause = queryFactory.insert(qEmployee);
@@ -172,13 +180,16 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
-    public void testSpecificUpdate(Stopwatch stopwatch) {
+    public int testSpecificUpdate(Stopwatch stopwatch) {
+        var updatedCount = new AtomicReference<>(0);
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
             var qEmployee = QEmployee.employee;
             var employees = dao.streamAllEmployees().toList();
+            updatedCount.set(employees.size());
 
             stopwatch.benchmark(() -> {
                 var updateClause = queryFactory.update(qEmployee);
@@ -201,14 +212,17 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
-    public void testRandomUpdate(Stopwatch stopwatch) {
+    public int testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
+        var updatedCount = new AtomicReference<>(0);
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
             var qEmployee = QEmployee.employee;
             var employees = dao.streamAllEmployees().toList();
+            updatedCount.set(employees.size());
 
             stopwatch.benchmark(() -> {
                 var updateClause = queryFactory.update(qEmployee);
@@ -234,9 +248,11 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
-    public void testReadWithRelations(Stopwatch stopwatch) {
+    public List<EmployeeRelationView> testReadWithRelations(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<EmployeeRelationView>>(List.of());
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
             var e = QEmployee.employee;
@@ -244,18 +260,20 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
             var s = new QEmployee("superior");
 
             stopwatch.benchmark(() -> {
-                var result = queryFactory.select(Projections.constructor(EmployeeRelationView.class,
+                result.set(queryFactory.select(Projections.constructor(EmployeeRelationView.class,
                                 e.id, e.name, c.name, s.name))
                         .from(e)
                         .join(c).on(e.cityId.eq(c.id))
                         .leftJoin(s).on(e.superiorId.eq(s.id))
-                        .fetch();
+                        .fetch());
             });
         });
+        return result.get();
     }
 
     @Override
-    public void testReadRelatedEntities(Stopwatch stopwatch) {
+    public List<RichEmployee> testReadRelatedEntities(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<RichEmployee>>(List.of());
         service.executeInTransaction(dao -> {
             var queryFactory = dao.getQueryFactory();
             var e = QEmployee.employee;
@@ -263,10 +281,10 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
             var s = new QEmployee("superior");
 
             stopwatch.benchmark(() -> {
-                var result = queryFactory.select(
+                result.set(queryFactory.select(
                                 e.id, e.name, e.contractDay, e.isActive, e.email, e.phone, e.salary, e.department, e.createdAt, e.updatedAt, e.createdBy, e.updatedBy,
                                 c.id, c.name, c.countryCode, c.latitude, c.longitude, c.createdAt, c.updatedAt, c.createdBy, c.updatedBy,
-                                s.id, s.name
+                                s.id, s.name, s.contractDay, s.isActive, s.email, s.phone, s.salary, s.department, s.createdAt, s.updatedAt, s.createdBy, s.updatedBy
                         )
                         .from(e)
                         .join(c).on(e.cityId.eq(c.id))
@@ -290,6 +308,16 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                                 sup = new RichEmployee();
                                 sup.setId(t.get(s.id));
                                 sup.setName(t.get(s.name));
+                                sup.setContractDay(t.get(s.contractDay));
+                                sup.setIsActive(t.get(s.isActive));
+                                sup.setEmail(t.get(s.email));
+                                sup.setPhone(t.get(s.phone));
+                                sup.setSalary(t.get(s.salary));
+                                sup.setDepartment(t.get(s.department));
+                                sup.setCreatedAt(t.get(s.createdAt));
+                                sup.setUpdatedAt(t.get(s.updatedAt));
+                                sup.setCreatedBy(t.get(s.createdBy));
+                                sup.setUpdatedBy(t.get(s.updatedBy));
                             }
 
                             var emp = new RichEmployee();
@@ -309,9 +337,10 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
                             emp.setUpdatedBy(t.get(e.updatedBy));
                             return emp;
                         })
-                        .toList();
+                        .toList());
             });
         });
+        return result.get();
     }
 
     public static Employee createRandomEmployee(City city) {
