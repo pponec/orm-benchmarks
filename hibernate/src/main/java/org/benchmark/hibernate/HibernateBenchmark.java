@@ -26,11 +26,15 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
-/** Main benchmark class for Hibernate */
+/**
+ * Main benchmark class for Hibernate.
+ * Uses entity/session APIs (including StatelessSession for bulk work), which is idiomatic Hibernate usage.
+ */
 public class HibernateBenchmark implements OrmBenchmark {
 
     /** City entity mapping */
@@ -93,19 +97,6 @@ public class HibernateBenchmark implements OrmBenchmark {
         /** Persists a new entity to the database */
         public void insert(Object entity) {
             session.persist(entity);
-        }
-
-        /** Flushes pending changes and clears the session cache */
-        public void flushAndClear() {
-            session.flush();
-            session.clear();
-        }
-
-        /** Retrieves all employees as a stream for efficient processing */
-        public Stream<Employee> streamAllEmployees() {
-            return session.createQuery("from HibEmployee", Employee.class)
-                    .setCacheable(false)
-                    .stream();
         }
 
         /** Retrieves a City from the database */
@@ -202,7 +193,7 @@ public class HibernateBenchmark implements OrmBenchmark {
     }
 
     /** Executes a single row insert test */
-    public void testSingleInsert(Stopwatch stopwatch) {
+    public int testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
             stopwatch.benchmark(() -> {
@@ -212,10 +203,12 @@ public class HibernateBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes a batch insert test using StatelessSession for maximum performance */
-    public void testBatchInsert(Stopwatch stopwatch) {
+    @Override
+    public int testBatchInsert(Stopwatch stopwatch) {
         service.executeInStatelessTransaction(session -> {
             var city = session.get(City.class, 1L);
             stopwatch.benchmark(() -> {
@@ -232,53 +225,73 @@ public class HibernateBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes updates on selected columns */
-    public void testSpecificUpdate(Stopwatch stopwatch) {
-        service.executeInTransaction(dao -> {
-            stopwatch.benchmark(() -> {
-                var count = 0;
-                try (var stream = dao.streamAllEmployees()) {
-                    for (var employee : (Iterable<Employee>) stream::iterator) {
-                        employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
-                        employee.setUpdatedAt(LocalDateTime.now());
+    @Override
+    public int testSpecificUpdate(Stopwatch stopwatch) {
+        var updatedCount = new AtomicReference<>(0);
+        service.executeInStatelessTransaction(session -> {
+            var employees = session.createQuery("from HibEmployee", Employee.class).list();
+            updatedCount.set(employees.size());
 
-                        if (++count % 50 == 0) {
-                            dao.flushAndClear();
-                        }
+            stopwatch.benchmark(() -> {
+                var batch = new ArrayList<Employee>(50);
+                for (var employee : employees) {
+                    employee.setSalary(employee.getSalary().add(BigDecimal.valueOf(1000)));
+                    employee.setUpdatedAt(LocalDateTime.now());
+                    batch.add(employee);
+
+                    if (batch.size() == 50) {
+                        session.updateMultiple(batch);
+                        batch.clear();
                     }
+                }
+                if (!batch.isEmpty()) {
+                    session.updateMultiple(batch);
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Executes updates on randomly modified columns */
-    public void testRandomUpdate(Stopwatch stopwatch) {
+    @Override
+    public int testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
-        service.executeInTransaction(dao -> {
-            stopwatch.benchmark(() -> {
-                var count = 0;
-                try (var stream = dao.streamAllEmployees()) {
-                    for (var employee : (Iterable<Employee>) stream::iterator) {
-                        if (random.nextBoolean()) {
-                            employee.setIsActive(!employee.getIsActive());
-                        } else {
-                            employee.setDepartment("Dept-" + random.nextInt(100));
-                        }
-                        employee.setUpdatedAt(LocalDateTime.now());
+        var updatedCount = new AtomicReference<>(0);
+        service.executeInStatelessTransaction(session -> {
+            var employees = session.createQuery("from HibEmployee", Employee.class).list();
+            updatedCount.set(employees.size());
 
-                        if (++count % 50 == 0) {
-                            dao.flushAndClear();
-                        }
+            stopwatch.benchmark(() -> {
+                var batch = new ArrayList<Employee>(50);
+                for (var employee : employees) {
+                    if (random.nextBoolean()) {
+                        employee.setIsActive(!employee.getIsActive());
+                    } else {
+                        employee.setDepartment("Dept-" + random.nextInt(100));
                     }
+                    employee.setUpdatedAt(LocalDateTime.now());
+                    batch.add(employee);
+
+                    if (batch.size() == 50) {
+                        session.updateMultiple(batch);
+                        batch.clear();
+                    }
+                }
+                if (!batch.isEmpty()) {
+                    session.updateMultiple(batch);
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Reads data into a DTO projection */
-    public void testReadWithRelations(Stopwatch stopwatch) {
+    public List<EmployeeRelationView> testReadWithRelations(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<EmployeeRelationView>>(List.of());
         service.executeReadOnly(session -> {
             var query = session.createQuery("""
                     select new org.benchmark.common.EmployeeRelationView(
@@ -292,13 +305,15 @@ public class HibernateBenchmark implements OrmBenchmark {
                     left join e.superior s
                     """, EmployeeRelationView.class);
 
-            stopwatch.benchmark(query::list);
+            stopwatch.benchmark(() -> result.set(query.list()));
         });
+        return result.get();
     }
 
     /** Reads full entities including mapped relations using fetch joins */
     @Override
-    public void testReadRelatedEntities(Stopwatch stopwatch) {
+    public List<Employee> testReadRelatedEntities(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<Employee>>(List.of());
         service.executeReadOnly(session -> {
             var query = session.createQuery("""
                     select e
@@ -307,8 +322,9 @@ public class HibernateBenchmark implements OrmBenchmark {
                     left join fetch e.superior s
                     """, Employee.class);
 
-            stopwatch.benchmark(query::list);
+            stopwatch.benchmark(() -> result.set(query.list()));
         });
+        return result.get();
     }
 
     /** Creates a random employee instance */

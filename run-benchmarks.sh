@@ -18,9 +18,11 @@ MODULE="benchmark"
 ITERATIONS=${1:-""}
 
 echo "Building the project using Maven Wrapper..."
-./mvnw clean install
+./mvnw clean install -U
 
 echo "Starting the benchmark..."
+
+export MAVEN_OPTS="-Xms4G -Xmx8G"
 
 # List of the libraries
 FRAMEWORKS="
@@ -31,6 +33,7 @@ FRAMEWORKS="
   EXPOSED
   QUERYDSL
   JOOQ
+  EBEAN
 "
 FRAMEWORKS="
   UJORM

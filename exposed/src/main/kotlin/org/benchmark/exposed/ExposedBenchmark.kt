@@ -13,7 +13,10 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.random.Random
 
-/** Main benchmark class for Exposed */
+/**
+ * Main benchmark class for Exposed.
+ * Uses Exposed DSL table queries, which is the framework-native and type-safe style.
+ */
 class ExposedBenchmark : OrmBenchmark {
 
     /** City table mapping */
@@ -295,7 +298,7 @@ class ExposedBenchmark : OrmBenchmark {
     private val service = Service()
 
     /** Executes a single row insert test */
-    fun testSingleInsert(stopwatch: Stopwatch) {
+    override fun testSingleInsert(stopwatch: Stopwatch): Int {
         service.executeInTransaction { dao ->
             stopwatch.benchmark {
                 for (i in 1..stopwatch.iterations) {
@@ -304,10 +307,11 @@ class ExposedBenchmark : OrmBenchmark {
                 }
             }
         }
+        return stopwatch.iterations
     }
 
     /** Executes a batch insert test */
-    override fun testBatchInsert(stopwatch: Stopwatch) {
+    override fun testBatchInsert(stopwatch: Stopwatch): Int {
         service.executeInTransaction { dao ->
             stopwatch.benchmark {
                 val batch = mutableListOf<Employee>()
@@ -323,12 +327,15 @@ class ExposedBenchmark : OrmBenchmark {
                 }
             }
         }
+        return stopwatch.iterations
     }
 
     /** Executes updates on selected columns */
-    override fun testSpecificUpdate(stopwatch: Stopwatch) {
+    override fun testSpecificUpdate(stopwatch: Stopwatch): Int {
+        var updatedCount = 0
         service.executeInTransaction { dao ->
             val employees = dao.findAllEmployees()
+            updatedCount = employees.size
             stopwatch.benchmark {
                 for (employee in employees) {
                     val newSalary = (employee.salary ?: BigDecimal.ZERO).add(BigDecimal.valueOf(1000))
@@ -336,13 +343,16 @@ class ExposedBenchmark : OrmBenchmark {
                 }
             }
         }
+        return updatedCount
     }
 
     /** Executes updates on randomly modified columns */
-    override fun testRandomUpdate(stopwatch: Stopwatch) {
+    override fun testRandomUpdate(stopwatch: Stopwatch): Int {
         val random = Random.Default
+        var updatedCount = 0
         service.executeInTransaction { dao ->
             val employees = dao.findAllEmployees()
+            updatedCount = employees.size
             stopwatch.benchmark {
                 for (employee in employees) {
                     if (random.nextBoolean()) {
@@ -353,22 +363,27 @@ class ExposedBenchmark : OrmBenchmark {
                 }
             }
         }
+        return updatedCount
     }
 
-    override fun testReadWithRelations(stopwatch: Stopwatch) {
+    override fun testReadWithRelations(stopwatch: Stopwatch): List<EmployeeRelationView> {
+        var result: List<EmployeeRelationView> = emptyList()
         service.executeReadOnly { dao ->
             stopwatch.benchmark {
-                val result = dao.findWithRelations()
+                result = dao.findWithRelations()
             }
         }
+        return result
     }
 
-    override fun testReadRelatedEntities(stopwatch: Stopwatch) {
+    override fun testReadRelatedEntities(stopwatch: Stopwatch): List<RichEmployee> {
+        var result: List<RichEmployee> = emptyList()
         service.executeReadOnly { dao ->
             stopwatch.benchmark {
-                val result = dao.findEntitiesWithRelations()
+                result = dao.findEntitiesWithRelations()
             }
         }
+        return result
     }
 
     companion object {

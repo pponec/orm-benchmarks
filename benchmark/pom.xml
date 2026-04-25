@@ -56,6 +56,11 @@
             <artifactId>jooq</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.benchmark</groupId>
+            <artifactId>ebean</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Silent logs for JDBI -->
         <dependency>

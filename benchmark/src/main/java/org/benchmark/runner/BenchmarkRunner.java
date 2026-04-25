@@ -3,13 +3,13 @@ package org.benchmark.runner;
 import lombok.RequiredArgsConstructor;
 import org.benchmark.common.OrmBenchmark;
 import org.benchmark.common.Stopwatch;
+import org.benchmark.ebean.EbeanBenchmark;
 import org.benchmark.exposed.ExposedBenchmark;
 import org.benchmark.hibernate.HibernateBenchmark;
 import org.benchmark.jdbi.JdbiBenchmark;
 import org.benchmark.jooq.JooqBenchmark;
 import org.benchmark.mybatis.MyBatisBenchmark;
 import org.benchmark.querydsl.QuerydslSqlBenchmark;
-import org.benchmark.springdatajdbc.SpringDataJdbcBenchmark;
 import org.benchmark.ujorm.UjormBenchmark;
 
 import java.io.FileWriter;
@@ -20,7 +20,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -39,6 +39,7 @@ public class BenchmarkRunner {
         MYBATIS("MyBatis", "mybatis", MyBatisBenchmark::new),
         QUERYDSL("QueryDsl", "querydsl", QuerydslSqlBenchmark::new),
         JOOQ("Jooq", "jooq", JooqBenchmark::new),
+        EBEAN("EBean", "ebean", EbeanBenchmark::new),
         UJORM("Ujorm3", "ujorm3", UjormBenchmark::new);
 
         /** CSV label */
@@ -58,6 +59,7 @@ public class BenchmarkRunner {
 
     /** Enum representing the benchmark operation */
     public enum Operation {
+        SINGLE_INSERT("Single Insert", OrmBenchmark::testSingleInsert),
         BATCH_INSERT("Batch Insert", OrmBenchmark::testBatchInsert),
         SPECIFIC_UPDATE("Specific Update", OrmBenchmark::testSpecificUpdate),
         RANDOM_UPDATE("Random Update", OrmBenchmark::testRandomUpdate),
@@ -65,10 +67,10 @@ public class BenchmarkRunner {
         READ_ENTITY_RELATIONS("Read Related Entities", OrmBenchmark::testReadRelatedEntities);
 
         private final String label;
-        private final BiConsumer<OrmBenchmark, Stopwatch> action;
+        private final BiFunction<OrmBenchmark, Stopwatch, Object> action;
 
         /** Constructor */
-        Operation(String label, BiConsumer<OrmBenchmark, Stopwatch> action) {
+        Operation(String label, BiFunction<OrmBenchmark, Stopwatch, Object> action) {
             this.label = label;
             this.action = action;
         }
@@ -76,7 +78,7 @@ public class BenchmarkRunner {
         /** Gets label */
         public String getLabel() { return label; }
         /** Gets action */
-        public BiConsumer<OrmBenchmark, Stopwatch> getAction() { return action; }
+        public BiFunction<OrmBenchmark, Stopwatch, Object> getAction() { return action; }
     }
 
     /** Calculates the exact size of the framework's jar-with-dependencies file in MB */
@@ -141,7 +143,7 @@ public class BenchmarkRunner {
         for (var operation : Operation.values()) {
             System.out.println("Warming Up: %s -> %s".formatted(framework.getLabel(), operation.getLabel()));
             var warmupStopwatch = new Stopwatch(iterations - 1);
-            operation.getAction().accept(instance, warmupStopwatch);
+            operation.getAction().apply(instance, warmupStopwatch);
         }
 
         var durations = new ArrayList<String>();
@@ -153,7 +155,7 @@ public class BenchmarkRunner {
             var actualStopwatch = new Stopwatch(iterations);
 
             var startAllocatedBytes = getThreadAllocatedBytes();
-            operation.getAction().accept(instance, actualStopwatch);
+            operation.getAction().apply(instance, actualStopwatch);
             var endAllocatedBytes = getThreadAllocatedBytes();
 
             var allocatedBytesTotal = endAllocatedBytes - startAllocatedBytes;

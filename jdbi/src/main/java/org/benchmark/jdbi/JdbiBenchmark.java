@@ -3,6 +3,7 @@ package org.benchmark.jdbi;
 import lombok.Getter;
 import lombok.Setter;
 import org.benchmark.common.DatabaseUtils;
+import org.benchmark.common.EmployeeRelationView;
 import org.benchmark.common.Stopwatch;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.mapper.Nested;
@@ -23,9 +24,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-/** Main benchmark class for JDBI */
+/**
+ * Main benchmark class for JDBI.
+ * Uses SQL Object API and explicit SQL statements, which is the idiomatic Jdbi style.
+ */
 public class JdbiBenchmark implements OrmBenchmark {
 
     /** City entity mapping */
@@ -83,19 +88,6 @@ public class JdbiBenchmark implements OrmBenchmark {
         private LocalDateTime updatedAt;
         private String createdBy;
         private String updatedBy;
-    }
-
-    /** Data transfer object for employee relations */
-    public record EmployeeRelationView(
-            /** Gets the ID of the employee. */
-            Long id,
-            /** Gets the name of the employee. */
-            String name,
-            /** Gets the name of the city. */
-            String cityName,
-            /** Gets the name of the superior. */
-            String superiorName
-    ) {
     }
 
     /** Data Access Object for entities */
@@ -256,7 +248,8 @@ public class JdbiBenchmark implements OrmBenchmark {
     }
 
     /** Executes a single row insert test */
-    public void testSingleInsert(Stopwatch stopwatch) {
+    @Override
+    public int testSingleInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
@@ -265,10 +258,11 @@ public class JdbiBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes a batch insert test */
-    public void testBatchInsert(Stopwatch stopwatch) {
+    public int testBatchInsert(Stopwatch stopwatch) {
         service.executeInTransaction(dao -> {
             stopwatch.benchmark(() -> {
                 var batch = new ArrayList<Employee>(50);
@@ -284,12 +278,15 @@ public class JdbiBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return stopwatch.getIterations();
     }
 
     /** Executes updates on selected columns */
-    public void testSpecificUpdate(Stopwatch stopwatch) {
+    public int testSpecificUpdate(Stopwatch stopwatch) {
+        var updatedCount = new AtomicReference<>(0);
         service.executeInTransaction(dao -> {
             var employees = dao.findAllEmployees();
+            updatedCount.set(employees.size());
             stopwatch.benchmark(() -> {
                 var batch = new ArrayList<Employee>(50);
                 for (var employee : employees) {
@@ -307,13 +304,16 @@ public class JdbiBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Executes updates on randomly modified columns */
-    public void testRandomUpdate(Stopwatch stopwatch) {
+    public int testRandomUpdate(Stopwatch stopwatch) {
         var random = new Random();
+        var updatedCount = new AtomicReference<>(0);
         service.executeInTransaction(dao -> {
             var employees = dao.findAllEmployees();
+            updatedCount.set(employees.size());
             stopwatch.benchmark(() -> {
                 var batch = new ArrayList<Employee>(50);
                 for (var employee : employees) {
@@ -335,25 +335,30 @@ public class JdbiBenchmark implements OrmBenchmark {
                 }
             });
         });
+        return updatedCount.get();
     }
 
     /** Reads data including mapped relations */
-    public void testReadWithRelations(Stopwatch stopwatch) {
+    public List<EmployeeRelationView> testReadWithRelations(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<EmployeeRelationView>>(List.of());
         service.executeReadOnly(dao -> {
             stopwatch.benchmark(() -> {
-                var result = dao.findWithRelations();
+                result.set(dao.findWithRelations());
             });
         });
+        return result.get();
     }
 
     /** Reads full entities including mapped relations */
     @Override
-    public void testReadRelatedEntities(Stopwatch stopwatch) {
+    public List<RichEmployee> testReadRelatedEntities(Stopwatch stopwatch) {
+        var result = new AtomicReference<List<RichEmployee>>(List.of());
         service.executeReadOnly(dao -> {
             stopwatch.benchmark(() -> {
-                var result = dao.findEntitiesWithRelations();
+                result.set(dao.findEntitiesWithRelations());
             });
         });
+        return result.get();
     }
 
     /** Creates a random employee instance */
