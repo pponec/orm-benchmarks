@@ -16,11 +16,21 @@ MODULE="benchmark"
 
 # Load the first argument as iterations (optional)
 ITERATIONS=${1:-""}
+DB_PROFILE=${BENCHMARK_DB_PROFILE:-h2}
 
 echo "Building the project using Maven Wrapper..."
-./mvnw clean install -U
+./mvnw clean install -U -DskipTests
 
 echo "Starting the benchmark..."
+echo "DB profile: ${DB_PROFILE}"
+if [ "${DB_PROFILE}" = "postgres" ] || [ "${DB_PROFILE}" = "postgresql" ]; then
+  echo "PostgreSQL mode enabled. Ensure DB is already running via ./run-database.sh"
+  echo "Ensuring PostgreSQL JDBC driver is available in local Maven repository..."
+  ./mvnw -q dependency:get -Dartifact=org.postgresql:postgresql:42.7.8
+else
+  echo "Ensuring H2 JDBC driver is available in local Maven repository..."
+  ./mvnw -q dependency:get -Dartifact=com.h2database:h2:2.4.240
+fi
 
 export MAVEN_OPTS="-Xms4G -Xmx8G"
 
@@ -35,16 +45,12 @@ FRAMEWORKS="
   JOOQ
   EBEAN
 "
-FRAMEWORKS="
-  UJORM
-  JDBI
-"
 
 for FRAMEWORK in ${FRAMEWORKS}; do
     echo "========================================================="
     echo "Running benchmark for ${FRAMEWORK}..."
     echo "========================================================="
-    ./mvnw exec:java -pl "${MODULE}" -Dexec.mainClass="${MAIN_CLASS}" -Dexec.args="${FRAMEWORK} ${ITERATIONS}"
+    ./mvnw exec:java -pl "${MODULE}" -Dexec.classpathScope=test -Dexec.mainClass="${MAIN_CLASS}" -Dexec.args="${FRAMEWORK} ${ITERATIONS}" -Dbenchmark.db.profile="${DB_PROFILE}"
 done
 
 cat "$REPORT"

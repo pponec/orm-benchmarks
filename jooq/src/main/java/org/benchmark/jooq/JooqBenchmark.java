@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 
 import static org.benchmark.jooq.generated.Tables.CITY;
 import static org.benchmark.jooq.generated.Tables.EMPLOYEE;
+import static org.jooq.impl.DSL.count;
 
 /**
  * Main benchmark class for jOOQ.
@@ -64,9 +65,13 @@ public class JooqBenchmark implements OrmBenchmark {
     }
 
     public static class Service implements AutoCloseable {
+        private SQLDialect currentDialect() {
+            return org.benchmark.common.DatabaseUtils.isPostgresProfile() ? SQLDialect.POSTGRES : SQLDialect.H2;
+        }
+
         public void execute(Consumer<DSLContext> action) {
             try (var connection = DatabaseUtils.getConnection()) {
-                var dsl = DSL.using(connection, SQLDialect.H2);
+                var dsl = DSL.using(connection, currentDialect());
                 action.accept(dsl);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
@@ -76,7 +81,7 @@ public class JooqBenchmark implements OrmBenchmark {
         /** Executes the given action inside a transaction */
         public void executeInTransaction(Consumer<DSLContext> action) {
             try (var connection = DatabaseUtils.getConnection()) {
-                var dsl = DSL.using(connection, SQLDialect.H2);
+                var dsl = DSL.using(connection, currentDialect());
                 dsl.transaction(configuration -> {
                     var transactionalDsl = DSL.using(configuration);
                     action.accept(transactionalDsl);
@@ -99,17 +104,34 @@ public class JooqBenchmark implements OrmBenchmark {
 
     @Override
     public int testSingleInsert(Stopwatch stopwatch) {
-        service.executeInTransaction(dsl -> {
-            stopwatch.benchmark(() -> {
+        var rowsBeforeMeasurement = new AtomicReference<Long>(0L);
+        service.execute(dsl -> rowsBeforeMeasurement.set(
+                dsl.select(count()).from(EMPLOYEE).fetchOne(0, long.class)
+        ));
+
+        stopwatch.benchmark(() -> service.executeInTransaction(dsl -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
                     var employee = createRandomEmployeeRecord(1L);
                     dsl.insertInto(EMPLOYEE)
                             .set(employee)
                             .execute();
                 }
-            });
-        });
-        return stopwatch.getIterations();
+            })
+        );
+
+        var rowsAfterMeasurement = new AtomicReference<Long>(0L);
+        service.execute(dsl -> rowsAfterMeasurement.set(
+                dsl.select(count()).from(EMPLOYEE).fetchOne(0, long.class)
+        ));
+
+        var insertedRows = rowsAfterMeasurement.get() - rowsBeforeMeasurement.get();
+        if (insertedRows != stopwatch.getIterations()) {
+            throw new IllegalStateException(
+                    "Insert validation failed for jOOQ single insert: expected %s inserted rows, got %s."
+                            .formatted(stopwatch.getIterations(), insertedRows)
+            );
+        }
+        return Math.toIntExact(insertedRows);
     }
 
     public int testBatchInsert(Stopwatch stopwatch) {

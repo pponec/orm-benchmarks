@@ -65,7 +65,7 @@
                 </executions>
                 <configuration>
                     <jdbcDriver>org.h2.Driver</jdbcDriver>
-                    <jdbcUrl>jdbc:h2:mem:benchmark;INIT=RUNSCRIPT FROM '${project.basedir}/src/main/resources/schema.sql'</jdbcUrl>
+                    <jdbcUrl>jdbc:h2:mem:benchmark;DATABASE_TO_LOWER=TRUE;INIT=RUNSCRIPT FROM '${project.basedir}/src/main/resources/schema.sql'</jdbcUrl>
                     <jdbcUser>sa</jdbcUser>
                     <packageName>org.benchmark.querydsl.sql.model</packageName>
                     <targetFolder>${project.basedir}/target/generated-sources/java</targetFolder>

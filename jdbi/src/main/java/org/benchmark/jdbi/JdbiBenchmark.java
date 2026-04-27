@@ -119,6 +119,10 @@ public class JdbiBenchmark implements OrmBenchmark {
         @SqlQuery("SELECT * FROM employee")
         List<Employee> findAllEmployees();
 
+        /** Counts employee rows */
+        @SqlQuery("SELECT COUNT(id) FROM employee")
+        long countEmployees();
+
         /** Updates salary for a specific employee */
         @SqlUpdate("""
             UPDATE employee
@@ -250,15 +254,27 @@ public class JdbiBenchmark implements OrmBenchmark {
     /** Executes a single row insert test */
     @Override
     public int testSingleInsert(Stopwatch stopwatch) {
-        service.executeInTransaction(dao -> {
-            stopwatch.benchmark(() -> {
+        var rowsBeforeMeasurement = new AtomicReference<Long>(0L);
+        service.executeReadOnly(dao -> rowsBeforeMeasurement.set(dao.countEmployees()));
+
+        stopwatch.benchmark(() -> service.executeInTransaction(dao -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
                     var employee = createRandomEmployee();
                     dao.insert(employee);
                 }
-            });
-        });
-        return stopwatch.getIterations();
+            })
+        );
+
+        var rowsAfterMeasurement = new AtomicReference<Long>(0L);
+        service.executeReadOnly(dao -> rowsAfterMeasurement.set(dao.countEmployees()));
+        var insertedRows = rowsAfterMeasurement.get() - rowsBeforeMeasurement.get();
+        if (insertedRows != stopwatch.getIterations()) {
+            throw new IllegalStateException(
+                    "Insert validation failed for Jdbi single insert: expected %s inserted rows, got %s."
+                            .formatted(stopwatch.getIterations(), insertedRows)
+            );
+        }
+        return Math.toIntExact(insertedRows);
     }
 
     /** Executes a batch insert test */

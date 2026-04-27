@@ -20,36 +20,36 @@ import kotlin.random.Random
 class ExposedBenchmark : OrmBenchmark {
 
     /** City table mapping */
-    object Cities : Table("CITY") {
-        val id = long("ID").autoIncrement()
-        val name = varchar("NAME", 50)
-        val countryCode = varchar("COUNTRY_CODE", 2)
-        val latitude = decimal("LATITUDE", 10, 8)
-        val longitude = decimal("LONGITUDE", 11, 8)
-        val createdAt = datetime("CREATED_AT")
-        val updatedAt = datetime("UPDATED_AT")
-        val createdBy = varchar("CREATED_BY", 50)
-        val updatedBy = varchar("UPDATED_BY", 50)
+    object Cities : Table("city") {
+        val id = long("id").autoIncrement()
+        val cityName = varchar("name", 50)
+        val countryCode = varchar("country_code", 2)
+        val latitude = decimal("latitude", 10, 8)
+        val longitude = decimal("longitude", 11, 8)
+        val createdAt = datetime("created_at")
+        val updatedAt = datetime("updated_at")
+        val createdBy = varchar("created_by", 50)
+        val updatedBy = varchar("updated_by", 50)
 
         override val primaryKey = PrimaryKey(id)
     }
 
     /** Employee table mapping */
-    object Employees : Table("EMPLOYEE") {
-        val id = long("ID").autoIncrement()
-        val name = varchar("NAME", 50)
-        val superiorId = long("SUPERIOR_ID").references(id).nullable()
-        val cityId = long("CITY_ID").references(Cities.id)
-        val contractDay = date("CONTRACT_DAY").nullable()
-        val isActive = bool("IS_ACTIVE").default(true)
-        val email = varchar("EMAIL", 100).nullable()
-        val phone = varchar("PHONE", 20).nullable()
-        val salary = decimal("SALARY", 10, 2).nullable()
-        val department = varchar("DEPARTMENT", 50).nullable()
-        val createdAt = datetime("CREATED_AT")
-        val updatedAt = datetime("UPDATED_AT")
-        val createdBy = varchar("CREATED_BY", 50)
-        val updatedBy = varchar("UPDATED_BY", 50)
+    object Employees : Table("employee") {
+        val id = long("id").autoIncrement()
+        val empName = varchar("name", 50)
+        val superiorId = long("superior_id").references(id).nullable()
+        val cityId = long("city_id").references(Cities.id)
+        val contractDay = date("contract_day").nullable()
+        val isActive = bool("is_active").default(true)
+        val email = varchar("email", 100).nullable()
+        val phone = varchar("phone", 20).nullable()
+        val salary = decimal("salary", 10, 2).nullable()
+        val department = varchar("department", 50).nullable()
+        val createdAt = datetime("created_at")
+        val updatedAt = datetime("updated_at")
+        val createdBy = varchar("created_by", 50)
+        val updatedBy = varchar("updated_by", 50)
 
         override val primaryKey = PrimaryKey(id)
     }
@@ -104,10 +104,18 @@ class ExposedBenchmark : OrmBenchmark {
 
     /** Data Access Object for entities */
     class Dao {
+        /** Counts employee rows */
+        fun countEmployees(): Long {
+            val countExpr = Employees.id.count()
+            return Employees
+                .select(countExpr)
+                .first()[countExpr]
+        }
+
         /** Inserts a single employee */
         fun insert(emp: Employee) {
             Employees.insert {
-                it[name] = emp.name
+                it[empName] = emp.name
                 it[cityId] = emp.cityId
                 it[contractDay] = emp.contractDay
                 it[isActive] = emp.isActive
@@ -125,7 +133,7 @@ class ExposedBenchmark : OrmBenchmark {
         /** Inserts a batch of employees */
         fun insertBatch(employees: List<Employee>) {
             Employees.batchInsert(employees) { emp ->
-                this[Employees.name] = emp.name
+                this[Employees.empName] = emp.name
                 this[Employees.cityId] = emp.cityId
                 this[Employees.contractDay] = emp.contractDay
                 this[Employees.isActive] = emp.isActive
@@ -145,7 +153,7 @@ class ExposedBenchmark : OrmBenchmark {
             return Employees.selectAll().map {
                 Employee(
                     id = it[Employees.id],
-                    name = it[Employees.name],
+                    name = it[Employees.empName],
                     cityId = it[Employees.cityId],
                     contractDay = it[Employees.contractDay],
                     isActive = it[Employees.isActive],
@@ -188,7 +196,7 @@ class ExposedBenchmark : OrmBenchmark {
         /** Retrieves employees with relations */
         fun findWithRelations(): List<EmployeeRelationView> {
             val superiorAlias = Employees.alias("superior")
-            val superiorNameAlias = superiorAlias[Employees.name]
+            val superiorNameAlias = superiorAlias[Employees.empName]
 
             return Employees
                 .innerJoin(Cities)
@@ -201,8 +209,8 @@ class ExposedBenchmark : OrmBenchmark {
                 .map {
                     EmployeeRelationView(
                         it[Employees.id],
-                        it[Employees.name],
-                        it[Cities.name],
+                        it[Employees.empName],
+                        it[Cities.cityName],
                         it[superiorNameAlias]
                     )
                 }
@@ -223,7 +231,7 @@ class ExposedBenchmark : OrmBenchmark {
                 .map { row ->
                     val city = City(
                         id = row[Cities.id],
-                        name = row[Cities.name],
+                        name = row[Cities.cityName],
                         countryCode = row[Cities.countryCode],
                         latitude = row[Cities.latitude],
                         longitude = row[Cities.longitude],
@@ -237,7 +245,7 @@ class ExposedBenchmark : OrmBenchmark {
                     val superior = if (superiorId != null) {
                         RichEmployee(
                             id = superiorId,
-                            name = row[superiorAlias[Employees.name]],
+                            name = row[superiorAlias[Employees.empName]],
                             city = city, // Zjednodušení (šéf a podřízený sdílí stejný instanční objekt města pro test)
                             superior = null,
                             contractDay = row.getOrNull(superiorAlias[Employees.contractDay]),
@@ -255,7 +263,7 @@ class ExposedBenchmark : OrmBenchmark {
 
                     RichEmployee(
                         id = row[Employees.id],
-                        name = row[Employees.name],
+                        name = row[Employees.empName],
                         city = city,
                         superior = superior,
                         contractDay = row[Employees.contractDay],
@@ -299,15 +307,29 @@ class ExposedBenchmark : OrmBenchmark {
 
     /** Executes a single row insert test */
     override fun testSingleInsert(stopwatch: Stopwatch): Int {
-        service.executeInTransaction { dao ->
-            stopwatch.benchmark {
+        var rowsBeforeMeasurement = 0L
+        service.executeReadOnly { dao ->
+            rowsBeforeMeasurement = dao.countEmployees()
+        }
+
+        stopwatch.benchmark {
+            service.executeInTransaction { dao ->
                 for (i in 1..stopwatch.iterations) {
                     val employee = createRandomEmployee()
                     dao.insert(employee)
                 }
             }
         }
-        return stopwatch.iterations
+
+        var rowsAfterMeasurement = 0L
+        service.executeReadOnly { dao ->
+            rowsAfterMeasurement = dao.countEmployees()
+        }
+        val insertedRows = rowsAfterMeasurement - rowsBeforeMeasurement
+        if (insertedRows != stopwatch.iterations.toLong()) {
+            error("Insert validation failed for Exposed single insert: expected ${stopwatch.iterations} inserted rows, got $insertedRows.")
+        }
+        return insertedRows.toInt()
     }
 
     /** Executes a batch insert test */

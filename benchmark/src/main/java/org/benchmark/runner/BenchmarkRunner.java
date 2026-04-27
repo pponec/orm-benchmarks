@@ -1,6 +1,7 @@
 package org.benchmark.runner;
 
 import lombok.RequiredArgsConstructor;
+import org.benchmark.common.DatabaseUtils;
 import org.benchmark.common.OrmBenchmark;
 import org.benchmark.common.Stopwatch;
 import org.benchmark.ebean.EbeanBenchmark;
@@ -136,10 +137,17 @@ public class BenchmarkRunner {
                 : 500_000;
 
         System.out.println("Starting ORM Benchmark for %s with %s iterations...".formatted(framework.getLabel(), Stopwatch.formatInteger(iterations)));
+        System.out.println("Database profile: " + DatabaseUtils.getDbProfile() + " (" + DatabaseUtils.getJdbcUrl() + ")");
+
+        // Ensure deterministic baseline per framework run.
+        DatabaseUtils.resetDatabase();
 
         var instance = framework.getSupplier().get();
 
-        // 1. Warming Up phase
+        // 1) Setup phase
+        System.out.println("Setup phase: benchmark instance initialized for " + framework.getLabel());
+
+        // 2) Warming-up phase
         for (var operation : Operation.values()) {
             System.out.println("Warming Up: %s -> %s".formatted(framework.getLabel(), operation.getLabel()));
             var warmupStopwatch = new Stopwatch(iterations - 1);
@@ -149,7 +157,7 @@ public class BenchmarkRunner {
         var durations = new ArrayList<String>();
         var memoryAllocations = new ArrayList<String>();
 
-        // 2. Benchmark phase with precise Allocation Rate tracking
+        // 3) Measurement phase with precise Allocation Rate tracking
         for (var operation : Operation.values()) {
             System.out.println("Running...: %s -> %s".formatted(framework.getLabel(), operation.getLabel()));
             var actualStopwatch = new Stopwatch(iterations);
@@ -165,7 +173,10 @@ public class BenchmarkRunner {
             memoryAllocations.add(Stopwatch.formatInteger(bytesPerRecord));
         }
 
-        // 3. Calculate JAR size for the specific framework
+        // 4) Validation/report phase
+        System.out.println("Validation phase: operation-level validation hooks are executed inside benchmark implementations.");
+
+        // 5) Calculate JAR size for the specific framework
         var jarSizeMb = getJarSizeMb(framework.getJarPrefix());
 
         saveToCsv(framework.getLabel(), iterations, durations, memoryAllocations, jarSizeMb);

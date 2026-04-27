@@ -3,6 +3,7 @@ package org.benchmark.querydsl;
 import com.querydsl.core.types.Projections;
 import com.querydsl.sql.Configuration;
 import com.querydsl.sql.H2Templates;
+import com.querydsl.sql.PostgreSQLTemplates;
 import com.querydsl.sql.SQLQueryFactory;
 import lombok.Getter;
 import lombok.Setter;
@@ -85,16 +86,15 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
         private final QCity qCity = QCity.city;
 
         public Dao(Connection connection) {
-            var templates = new H2Templates();
+            var templates = DatabaseUtils.isPostgresProfile() ? new PostgreSQLTemplates() : new H2Templates();
             var configuration = new Configuration(templates);
             this.queryFactory = new SQLQueryFactory(configuration, () -> connection);
         }
 
         public void insert(Employee employee) {
-            var result = queryFactory.insert(qEmployee)
+            queryFactory.insert(qEmployee)
                     .populate(employee)
-                    .executeWithKey(Long.class);
-            employee.setId(result);
+                    .execute();
         }
 
         public Stream<Employee> streamAllEmployees() {
@@ -117,6 +117,12 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
 
         public SQLQueryFactory getQueryFactory() {
             return queryFactory;
+        }
+
+        public long countEmployees() {
+            return queryFactory.select(qEmployee.id.count())
+                    .from(qEmployee)
+                    .fetchOne();
         }
     }
 
@@ -145,16 +151,28 @@ public class QuerydslSqlBenchmark implements OrmBenchmark {
 
     @Override
     public int testSingleInsert(Stopwatch stopwatch) {
-        service.executeInTransaction(dao -> {
+        var rowsBeforeMeasurement = new AtomicReference<Long>(0L);
+        service.executeInTransaction(dao -> rowsBeforeMeasurement.set(dao.countEmployees()));
+
+        stopwatch.benchmark(() -> service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
-            stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
                     var employee = createRandomEmployee(city);
                     dao.insert(employee);
                 }
-            });
-        });
-        return stopwatch.getIterations();
+            })
+        );
+
+        var rowsAfterMeasurement = new AtomicReference<Long>(0L);
+        service.executeInTransaction(dao -> rowsAfterMeasurement.set(dao.countEmployees()));
+        var insertedRows = rowsAfterMeasurement.get() - rowsBeforeMeasurement.get();
+        if (insertedRows != stopwatch.getIterations()) {
+            throw new IllegalStateException(
+                    "Insert validation failed for QueryDSL single insert: expected %s inserted rows, got %s."
+                            .formatted(stopwatch.getIterations(), insertedRows)
+            );
+        }
+        return Math.toIntExact(insertedRows);
     }
 
     public int testBatchInsert(Stopwatch stopwatch) {

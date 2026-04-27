@@ -30,9 +30,9 @@ public class EbeanBenchmark implements OrmBenchmark, AutoCloseable {
         preloadPoolStatusClass();
 
         var dsConfig = new DataSourceConfig();
-        dsConfig.setUrl("jdbc:h2:mem:benchmark;DB_CLOSE_DELAY=-1");
-        dsConfig.setUsername("sa");
-        dsConfig.setPassword("");
+        dsConfig.setUrl(DatabaseUtils.getJdbcUrl());
+        dsConfig.setUsername(DatabaseUtils.getJdbcUser());
+        dsConfig.setPassword(DatabaseUtils.getJdbcPassword());
 
         var config = new DatabaseConfig();
         config.setDataSourceConfig(dsConfig);
@@ -74,6 +74,9 @@ public class EbeanBenchmark implements OrmBenchmark, AutoCloseable {
     /** Execute a single row insert test. */
     @Override
     public int testSingleInsert(Stopwatch stopwatch) {
+        var rowsBeforeMeasurement = database.sqlQuery("select count(id) as c from employee")
+                .findOne()
+                .getLong("c");
         var city = database.find(City.class, 1L);
         stopwatch.benchmark(() -> {
             try (var transaction = database.beginTransaction()) {
@@ -84,7 +87,17 @@ public class EbeanBenchmark implements OrmBenchmark, AutoCloseable {
                 transaction.commit();
             }
         });
-        return stopwatch.getIterations();
+        var rowsAfterMeasurement = database.sqlQuery("select count(id) as c from employee")
+                .findOne()
+                .getLong("c");
+        var insertedRows = rowsAfterMeasurement - rowsBeforeMeasurement;
+        if (insertedRows != stopwatch.getIterations()) {
+            throw new IllegalStateException(
+                    "Insert validation failed for Ebean single insert: expected %s inserted rows, got %s."
+                            .formatted(stopwatch.getIterations(), insertedRows)
+            );
+        }
+        return Math.toIntExact(insertedRows);
     }
 
     /** Execute a batch insert test using transaction batching. */

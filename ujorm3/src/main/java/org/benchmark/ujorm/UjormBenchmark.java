@@ -129,6 +129,15 @@ public class UjormBenchmark implements OrmBenchmark {
             return cityEm.crud(conn).findById(id).orElse(null);
         }
 
+        /** Counts employee rows */
+        public long countEmployees(Connection conn) {
+            return SqlQuery.run(conn, query -> query
+                    .sql("SELECT COUNT(id) FROM employee")
+                    .toStream(rs -> rs.getLong(1))
+                    .findFirst()
+                    .orElse(0L));
+        }
+
         /** Retrieves employees joined with city and superior */
         public List<EmployeeRelationView> findWithRelations(Connection conn) {
             var sql = """
@@ -225,16 +234,28 @@ public class UjormBenchmark implements OrmBenchmark {
 
     /** Executes a single row insert test */
     public int testSingleInsert(Stopwatch stopwatch) {
-        service.executeInTransaction((dao, conn) -> {
+        var rowsBeforeMeasurement = new AtomicReference<Long>(0L);
+        service.executeInTransaction((dao, conn) -> rowsBeforeMeasurement.set(dao.countEmployees(conn)));
+
+        stopwatch.benchmark(() -> service.executeInTransaction((dao, conn) -> {
             var city = dao.getCity(1L, conn);
-            stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
                     var employee = createRandomEmployee(city);
                     dao.insert(employee, conn);
                 }
-            });
-        });
-        return stopwatch.getIterations();
+            })
+        );
+
+        var rowsAfterMeasurement = new AtomicReference<Long>(0L);
+        service.executeInTransaction((dao, conn) -> rowsAfterMeasurement.set(dao.countEmployees(conn)));
+        var insertedRows = rowsAfterMeasurement.get() - rowsBeforeMeasurement.get();
+        if (insertedRows != stopwatch.getIterations()) {
+            throw new IllegalStateException(
+                    "Insert validation failed for Ujorm3 single insert: expected %s inserted rows, got %s."
+                            .formatted(stopwatch.getIterations(), insertedRows)
+            );
+        }
+        return Math.toIntExact(insertedRows);
     }
 
     /** Executes a batch insert test */

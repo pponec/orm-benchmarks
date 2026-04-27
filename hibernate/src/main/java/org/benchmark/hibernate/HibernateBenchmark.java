@@ -99,6 +99,11 @@ public class HibernateBenchmark implements OrmBenchmark {
             session.persist(entity);
         }
 
+        /** Flushes pending changes to the database */
+        public void flush() {
+            session.flush();
+        }
+
         /** Retrieves a City from the database */
         public City getCity(Long id) {
             var result = session.find(City.class, id);
@@ -118,10 +123,15 @@ public class HibernateBenchmark implements OrmBenchmark {
             configuration.addAnnotatedClass(City.class);
             configuration.addAnnotatedClass(Employee.class);
             configuration.setProperty("hibernate.connection.provider_class", "org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl");
-            configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:benchmark;DB_CLOSE_DELAY=-1");
-            configuration.setProperty("hibernate.connection.username", "sa");
-            configuration.setProperty("hibernate.connection.password", "");
-            configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+            configuration.setProperty("hibernate.connection.url", DatabaseUtils.getJdbcUrl());
+            configuration.setProperty("hibernate.connection.username", DatabaseUtils.getJdbcUser());
+            configuration.setProperty("hibernate.connection.password", DatabaseUtils.getJdbcPassword());
+            configuration.setProperty(
+                    "hibernate.dialect",
+                    DatabaseUtils.isPostgresProfile()
+                            ? "org.hibernate.dialect.PostgreSQLDialect"
+                            : "org.hibernate.dialect.H2Dialect"
+            );
             configuration.setProperty("hibernate.jdbc.batch_size", "50");
             configuration.setProperty("hibernate.order_inserts", "true");
             configuration.setProperty("hibernate.order_updates", "true");
@@ -180,6 +190,15 @@ public class HibernateBenchmark implements OrmBenchmark {
             }
         }
 
+        /** Counts all employee records */
+        public long countEmployees() {
+            var result = new AtomicReference<Long>(0L);
+            executeReadOnly(session -> result.set(
+                    session.createQuery("select count(e.id) from HibEmployee e", Long.class).getSingleResult()
+            ));
+            return result.get();
+        }
+
         @Override
         public void close() {
             sessionFactory.close();
@@ -194,16 +213,30 @@ public class HibernateBenchmark implements OrmBenchmark {
 
     /** Executes a single row insert test */
     public int testSingleInsert(Stopwatch stopwatch) {
-        service.executeInTransaction(dao -> {
+        // Setup phase (outside measured block)
+        var rowsBeforeMeasurement = service.countEmployees();
+
+        // Measurement phase includes persist + explicit flush + transaction commit.
+        stopwatch.benchmark(() -> service.executeInTransaction(dao -> {
             var city = dao.getCity(1L);
-            stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
                     var employee = createRandomEmployee(city);
                     dao.insert(employee);
                 }
-            });
-        });
-        return stopwatch.getIterations();
+                dao.flush();
+            })
+        );
+
+        // Validation phase (outside measured block)
+        var rowsAfterMeasurement = service.countEmployees();
+        var insertedRows = rowsAfterMeasurement - rowsBeforeMeasurement;
+        if (insertedRows != stopwatch.getIterations()) {
+            throw new IllegalStateException(
+                    "Insert validation failed for Hibernate single insert: expected %s inserted rows, got %s."
+                            .formatted(stopwatch.getIterations(), insertedRows)
+            );
+        }
+        return Math.toIntExact(insertedRows);
     }
 
     /** Executes a batch insert test using StatelessSession for maximum performance */

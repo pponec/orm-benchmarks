@@ -146,6 +146,11 @@ public class MyBatisBenchmark implements OrmBenchmark {
             """)
         List<EmployeeFlat> getAllEmployees();
 
+        @Select("""
+            SELECT COUNT(id) FROM employee
+            """)
+        long countEmployees();
+
         @Update("""
             UPDATE employee
             SET salary = #{salary}, updated_at = #{updatedAt}
@@ -213,7 +218,13 @@ public class MyBatisBenchmark implements OrmBenchmark {
         private final SqlSessionFactory sessionFactory;
 
         public Service() {
-            var dataSource = new UnpooledDataSource("org.h2.Driver", "jdbc:h2:mem:benchmark;DB_CLOSE_DELAY=-1", "sa", "");
+            var driver = DatabaseUtils.isPostgresProfile() ? "org.postgresql.Driver" : "org.h2.Driver";
+            var dataSource = new UnpooledDataSource(
+                    driver,
+                    DatabaseUtils.getJdbcUrl(),
+                    DatabaseUtils.getJdbcUser(),
+                    DatabaseUtils.getJdbcPassword()
+            );
             var environment = new Environment("benchmark", new JdbcTransactionFactory(), dataSource);
             var configuration = new Configuration(environment);
 
@@ -256,17 +267,36 @@ public class MyBatisBenchmark implements OrmBenchmark {
 
     @Override
     public int testSingleInsert(Stopwatch stopwatch) {
+        var rowsBeforeMeasurement = new AtomicReference<Long>(0L);
         service.executeInTransaction(session -> {
             var mapper = session.getMapper(EmployeeMapper.class);
+            rowsBeforeMeasurement.set(mapper.countEmployees());
+        });
+
+        stopwatch.benchmark(() -> service.executeInTransaction(session -> {
+            var mapper = session.getMapper(EmployeeMapper.class);
             var city = mapper.getCity(1L);
-            stopwatch.benchmark(() -> {
                 for (var i = 1; i <= stopwatch.getIterations(); i++) {
                     var employee = createRandomEmployee(city);
                     mapper.insert(employee);
                 }
-            });
+            })
+        );
+
+        var rowsAfterMeasurement = new AtomicReference<Long>(0L);
+        service.executeInTransaction(session -> {
+            var mapper = session.getMapper(EmployeeMapper.class);
+            rowsAfterMeasurement.set(mapper.countEmployees());
         });
-        return stopwatch.getIterations();
+
+        var insertedRows = rowsAfterMeasurement.get() - rowsBeforeMeasurement.get();
+        if (insertedRows != stopwatch.getIterations()) {
+            throw new IllegalStateException(
+                    "Insert validation failed for MyBatis single insert: expected %s inserted rows, got %s."
+                            .formatted(stopwatch.getIterations(), insertedRows)
+            );
+        }
+        return Math.toIntExact(insertedRows);
     }
 
     @Override
