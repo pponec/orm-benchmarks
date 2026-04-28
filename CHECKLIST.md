@@ -12,7 +12,7 @@ This checklist tracks follow-up actions based on methodological review feedback.
 ## 2) Add PostgreSQL benchmark profile (production-like baseline)
 
 - [x] Introduce a dedicated Postgres profile/config next to H2.
-- [x] Provide reproducible PostgreSQL startup via `run-database.sh` script workflow.
+- [x] Provide reproducible PostgreSQL startup via `run-database-pg.sh` script workflow.
 - [x] Add DB warm-up phase before measured iterations.
 - [x] Ensure schema setup and teardown are deterministic per run.
 

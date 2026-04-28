@@ -24,7 +24,7 @@ echo "Building the project using Maven Wrapper..."
 echo "Starting the benchmark..."
 echo "DB profile: ${DB_PROFILE}"
 if [ "${DB_PROFILE}" = "postgres" ] || [ "${DB_PROFILE}" = "postgresql" ]; then
-  echo "PostgreSQL mode enabled. Ensure DB is already running via ./run-database.sh"
+  echo "PostgreSQL mode enabled. Ensure DB is already running via ./run-database-pg.sh"
   echo "Ensuring PostgreSQL JDBC driver is available in local Maven repository..."
   ./mvnw -q dependency:get -Dartifact=org.postgresql:postgresql:42.7.8
 else

@@ -5,7 +5,7 @@
 #   ./run-benchmarks-postgresql.sh
 #   ./run-benchmarks-postgresql.sh 500000
 #
-# Note: Ensure PostgreSQL is running first (for example via ./run-database-postgresql.sh).
+# Note: Ensure PostgreSQL is running first (for example via ./run-database-pg.sh).
 
 set -e
 cd "$(dirname "$0")"
