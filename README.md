@@ -1,7 +1,6 @@
 # ORM Benchmark
 
 This project compares the performance of several Java/Kotlin ORM and database mapping frameworks.
-To execute the performance tests against this default PostgreSQL database, use the `run-benchmarks-pg.sh` script.
 
 ## Environment
 
@@ -20,6 +19,8 @@ To execute the performance tests against this default PostgreSQL database, use t
 * **QueryDSL:** `5.1.0`.
 * **Ebean:** `15.5.1`.
 * **Ujorm3:** `3.0.0-RC5`.
+
+To execute the performance tests against this default PostgreSQL database, use the `run-benchmarks-pg.sh` script.
 
 ## Test Scenarios & Metrics
 
@@ -47,6 +48,7 @@ The `Memory` score is computed as the average of all memory columns.
 The `JAR Size` metric remains standalone.
 Each metric is then min-max scaled to a range of `20..100` so that higher is always better.
 The formula used for lower-is-better metrics is `20 + 80 * (max - value) / (max - min)`, substituting `60` if all values are identical.
+
 
 ### How Quality was scored
 
