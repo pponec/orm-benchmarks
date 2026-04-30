@@ -94,7 +94,7 @@ The score variations among libraries primarily reflect differences in their arch
 The following table displays the measurement results for the H2 database in in-memory mode.
 Please note how different databases also change the ranking in certain metrics.
 
-There is no need to repeat **the same** values for the **JAR Size** and **Quality** metrics in the table.
+There is no need to repeat **the same** values for the `JAR Size` and `Quality` metrics in the table.
 
 | Library | Single Insert<br/>[s] | Batch Insert<br/>[s] | Specific<br/>Update [s] | Random<br/>Update [s] | Read<br/>Rels [s] | Read Entity <br/>[s] | Mem Single<br/>[B/op] | Mem Batch<br/>[B/op] | Mem Update<br/>[B/op] | Mem Rand<br/>Upd [B/op] | Mem Read w/<br/>Rel. [B/op] | Mem Read<br/>[B/op] |
 |:--------|---------------------:|--------------------:|---------------------:|---------------------:|-------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|
