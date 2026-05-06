@@ -23,7 +23,7 @@
         <mybatis.version>3.5.15</mybatis.version>
         <querydsl.version>5.1.0</querydsl.version>
         <ebean.version>15.5.1</ebean.version>
-        <ujorm.version>3.0.0-RC5</ujorm.version>
+        <ujorm.version>3.0.0</ujorm.version>
         <jakarta.persistence.version>3.1.0</jakarta.persistence.version>
         <spring-boot.version>4.0.5</spring-boot.version>
     </properties>

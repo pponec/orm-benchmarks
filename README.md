@@ -60,6 +60,8 @@ It combines the following aspects:
 * **Boilerplate reduction (20%):** This measures the amount of repetitive setup and mapping code needed per scenario.
 * **Type safety (20%):** This assesses the compile-time guarantees in query construction, mapping, and update operations.
 
+Quality scoring in this document was reviewed by AI using the **Codex 5.3** model.
+
 Performance and memory results from this benchmark are used as secondary calibration signals, not as the primary scoring axis for `Quality`.
 
 ## Benchmark Results (PostgreSQL)
@@ -69,15 +71,15 @@ Performance and memory results from this benchmark are used as secondary calibra
 </div>
 
 | Library | Single Insert<br/>[s] | Batch Insert<br/>[s] | Specific<br/>Update [s] | Random<br/>Update [s] | Read<br/>Rels [s] | Read Entity <br/>[s] | Mem Single<br/>[B/op] | Mem Batch<br/>[B/op] | Mem Update<br/>[B/op] | Mem Rand<br/>Upd [B/op] | Mem Read w/<br/>Rel. [B/op] | Mem Read<br/>[B/op] | JAR Size<br/>[MB] | Quality<br/>[0-100] |
-|:--------|---------------------:|--------------------:|---------------------:|---------------------:|-------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
-| Ujorm3 | 31.28 | 16.29 | **39.27** | 46.39 | 3.37 | 6.91 | 4_085 | 3_572 | **11_478** | **10_088** | **1_206** | 10_773 | **0.26** | **88** |
-| Jdbi | 31.77 | **12.03** | 40.75 | 44.62 | 2.60 | **5.85** | 14_416 | 4_006 | 17_479 | 15_586 | 2_297 | **8_643** | 1.34 | 76 |
-| MyBatis | 43.24 | 29.86 | 39.89 | **43.52** | 3.32 | 8.43 | 4_606 | 4_670 | 17_836 | 15_653 | 6_019 | 15_025 | 1.73 | 66 |
-| Hibernate | 44.78 | 44.47 | 56.60 | 59.58 | 2.23 | 8.20 | 8_946 | 8_072 | 36_239 | 36_170 | 1_379 | 9_982 | 23.13 | 70 |
-| Exposed | 58.56 | 19.12 | 137.77 | 137.33 | 7.76 | 9.54 | 23_473 | 15_398 | 33_289 | 31_204 | 10_307 | 19_042 | 7.27 | 64 |
-| QueryDsl | 28.25 | 17.04 | 47.17 | 47.82 | 2.28 | 8.27 | 38_811 | 36_326 | 85_616 | 83_471 | 1_380 | 11_218 | 0.91 | 68 |
-| Jooq | 29.68 | 17.79 | 46.61 | 48.77 | 3.63 | 9.54 | 19_604 | 20_023 | 44_200 | 42_886 | 2_083 | 13_347 | 5.95 | 82 |
-| EBean | **24.69** | 12.37 | 86.19 | 87.36 | **2.21** | 6.50 | **3_896** | **2_867** | 15_626 | 13_349 | 2_296 | 11_781 | 6.91 | 74 |
+|:--------|---------------------:|--------------------:|---------------------:|---------------------:|-------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|------------------:|--------------------:|
+| Ujorm3 | 31.28 | 16.29 | **39.27** | 46.39 | 3.37 | 6.91 | 4_085 | 3_572 | **11_478** | **10_088** | **1_206** | 10_773 |          **0.27** | **84** |
+| Jdbi | 31.77 | **12.03** | 40.75 | 44.62 | 2.60 | **5.85** | 14_416 | 4_006 | 17_479 | 15_586 | 2_297 | **8_643** |              1.34 | 78 |
+| MyBatis | 43.24 | 29.86 | 39.89 | **43.52** | 3.32 | 8.43 | 4_606 | 4_670 | 17_836 | 15_653 | 6_019 | 15_025 |              1.73 | 69 |
+| Hibernate | 44.78 | 44.47 | 56.60 | 59.58 | 2.23 | 8.20 | 8_946 | 8_072 | 36_239 | 36_170 | 1_379 | 9_982 |             23.13 | 73 |
+| Exposed | 58.56 | 19.12 | 137.77 | 137.33 | 7.76 | 9.54 | 23_473 | 15_398 | 33_289 | 31_204 | 10_307 | 19_042 |              7.27 | 70 |
+| QueryDsl | 28.25 | 17.04 | 47.17 | 47.82 | 2.28 | 8.27 | 38_811 | 36_326 | 85_616 | 83_471 | 1_380 | 11_218 |              0.91 | 75 |
+| Jooq | 29.68 | 17.79 | 46.61 | 48.77 | 3.63 | 9.54 | 19_604 | 20_023 | 44_200 | 42_886 | 2_083 | 13_347 |              5.95 | 86 |
+| EBean | **24.69** | 12.37 | 86.19 | 87.36 | **2.21** | 6.50 | **3_896** | **2_867** | 15_626 | 13_349 | 2_296 | 11_781 |              6.91 | 72 |
 
 The `Quality` metric evaluates aspects such as the type-safety of the API, the amount of required boilerplate for CRUD operations and relation mapping, and the predictability of the persistence context.
 The score variations among libraries primarily reflect differences in their architectural approaches to mapping complex entity structures and the corresponding configuration requirements.

@@ -3,7 +3,7 @@
 # ==============================================================================
 # PostgreSQL Database Container Management Script
 #
-# Environment Variables (with sensible defaults):
+# Environment Variables (defaults match ./run-benchmarks-pg.sh / DatabaseUtils.java):
 #   APP_DB_NAME           - Name of the database (default 'benchmark')
 #   APP_DB_USER           - Username (default 'benchmark')
 #   APP_DB_PASSWORD       - Password (default 'benchmark')
@@ -70,9 +70,41 @@ start_container() {
       -e POSTGRES_DB="$DB_NAME" \
       -e POSTGRES_USER="$DB_USER" \
       -e POSTGRES_PASSWORD="$DB_PASSWORD" \
-      -v pg_data_demo:/var/lib/postgresql \
+      -v pg_data_benchmark:/var/lib/postgresql \
       "$IMAGE_NAME"
   fi
+}
+
+# POSTGRES_* is applied only on first volume init; later default changes can leave the
+# cluster without the current APP_DB_NAME — ensure_target_database_exists fixes that.
+wait_for_postgres_ready() {
+  local deadline=$((SECONDS + 90))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if docker exec "$CONTAINER_NAME" pg_isready -U "$DB_USER" -d postgres >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+ensure_target_database_exists() {
+  if ! is_running; then
+    return 0
+  fi
+  if ! wait_for_postgres_ready; then
+    echo "Error: PostgreSQL did not become ready inside '$CONTAINER_NAME'." >&2
+    exit 1
+  fi
+  local exists
+  exists=$(docker exec "$CONTAINER_NAME" psql -U "$DB_USER" -d postgres -Atq -c \
+    "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'" 2>/dev/null || echo "")
+  if [ "$exists" = "1" ]; then
+    return 0
+  fi
+  echo "Database '${DB_NAME}' is missing (often an older persistent volume). Creating it..."
+  docker exec "$CONTAINER_NAME" psql -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -c \
+    "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\""
 }
 
 stop_container() {
@@ -123,9 +155,9 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 case "$1" in
-  "")        start_container ;;
+  "")        start_container; ensure_target_database_exists ;;
   stop)      stop_container ;;
-  restart)   restart_container ;;
+  restart)   restart_container; ensure_target_database_exists ;;
   delete)    delete_container ;;
   backup)    backup_database ;;
   *)
