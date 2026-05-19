@@ -18,7 +18,7 @@ This project compares the performance of several Java/Kotlin ORM and database ma
 * **MyBatis:** `3.5.15`.
 * **QueryDSL:** `5.1.0`.
 * **Ebean:** `15.5.1`.
-* **Ujorm3:** `3.0.0-RC5`.
+* **Ujorm3:** `3.0.0`.
 
 To execute the performance tests against this default PostgreSQL database, use the `run-benchmarks-pg.sh` script.
 
