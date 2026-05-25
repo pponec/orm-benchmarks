@@ -45,6 +45,9 @@ FRAMEWORKS="
   JOOQ
   EBEAN
 "
+FRAMEWORKS="
+   UJORM
+ "
 
 for FRAMEWORK in ${FRAMEWORKS}; do
     echo "========================================================="
