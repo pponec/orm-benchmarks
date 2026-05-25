@@ -60,9 +60,9 @@ public class Stopwatch {
         return String.format(Locale.US, "%,d", number).replace(',', '_');
     }
 
-    /** Formats duration in nanoseconds to a string in seconds with 3 decimal places */
+    /** Formats duration in nanoseconds to a string in seconds with 2 decimal places */
     public static String formatDuration(long durationNanos) {
         var durationSeconds = durationNanos / 1_000_000_000.0;
-        return String.format(Locale.US, "%.3f", durationSeconds);
+        return String.format(Locale.US, "%.2f", durationSeconds);
     }
 }
