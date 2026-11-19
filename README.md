@@ -18,7 +18,7 @@ This project compares the performance of several Java/Kotlin ORM and database ma
 * **MyBatis:** `3.5.15`.
 * **QueryDSL:** `5.1.0`.
 * **Ebean:** `15.5.1`.
-* **Ujorm3:** `3.0.5`.
+* **Ujorm3:** `3.0.5` (the H2 results: `3.0.6-SNAPSHOT`).
 
 To execute the performance tests against this default PostgreSQL database, use the `run-benchmarks-pg.sh` script.
 
@@ -100,7 +100,7 @@ There is no need to repeat **the same** values for the `JAR Size` and `Quality` 
 
 | Library | Single Insert<br/>[s] | Batch Insert<br/>[s] | Specific<br/>Update [s] | Random<br/>Update [s] | Read<br/>Rels [s] | Read Entity <br/>[s] | Mem Single<br/>[B/op] | Mem Batch<br/>[B/op] | Mem Update<br/>[B/op] | Mem Rand<br/>Upd [B/op] | Mem Read w/<br/>Rel. [B/op] | Mem Read<br/>[B/op] |
 |:--------|---------------------:|--------------------:|---------------------:|---------------------:|-------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|---------------------:|
-| Ujorm3 | 2.07 | **1.15** | **8.12** | **8.62** | **0.51** | **1.90** | **12_713** | **11_483** | **71_800** | **72_510** | **2_169** | **4_569** |
+| Ujorm3 | 2.03 | **1.15** | **8.08** | **8.63** | **0.50** | **1.64** | **12_689** | **11_483** | **71_800** | **72_511** | **2_169** | **4_569** |
 | Jdbi | 4.48 | 1.52 | 8.45 | 8.73 | 0.81 | 2.22 | 23_297 | 13_790 | 79_696 | 79_913 | 3_162 | 6_554 |
 | EBean | 2.08 | 1.84 | 12.17 | 11.84 | 0.75 | 2.18 | 12_926 | 12_917 | 76_834 | 76_717 | 3_290 | 8_893 |
 | Jooq | 5.33 | 5.27 | 18.19 | 17.65 | 1.00 | 4.24 | 27_286 | 28_313 | 107_253 | 107_395 | 3_034 | 10_618 |
