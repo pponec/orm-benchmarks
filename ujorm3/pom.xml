@@ -75,6 +75,38 @@
                 </configuration>
             </plugin>
 
+            <!--
+                Generate the Ujorm domain handlers at build time, so the runtime needs
+                no Java compiler (a plain JRE or a GraalVM native image are enough).
+                The handler classes go straight to target/classes, the sources
+                in target/generated-sources/ujorm-handlers are for review only.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>ujorm-precompile-handlers</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <classpathScope>compile</classpathScope>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>org.ujorm.core.generator.HandlerPrecompiler</argument>
+                                <argument>${project.build.outputDirectory}</argument>
+                                <argument>${project.build.directory}/generated-sources/ujorm-handlers</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
